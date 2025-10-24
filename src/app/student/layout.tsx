@@ -64,7 +64,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
             <SidebarMenu>
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <Link href={item.href} legacyBehavior passHref>
+                  <Link href={item.href}>
                     <SidebarMenuButton
                       isActive={pathname === item.href || (item.href !== '/student' && pathname.startsWith(item.href))}
                       tooltip={{ children: item.label, side: 'left', align: 'center' }}
