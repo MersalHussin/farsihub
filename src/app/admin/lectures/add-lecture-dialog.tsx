@@ -28,6 +28,13 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, PlusCircle } from "lucide-react";
 
@@ -35,6 +42,9 @@ const formSchema = z.object({
   title: z.string().min(3, { message: "يجب أن يتكون العنوان من 3 أحرف على الأقل." }),
   description: z.string().min(10, { message: "يجب أن يتكون الوصف من 10 أحرف على الأقل." }),
   pdfUrl: z.string().url({ message: "الرجاء إدخال رابط صالح." }),
+  year: z.enum(["first", "second", "third", "fourth"], {
+    required_error: "الرجاء تحديد الفرقة الدراسية.",
+  }),
 });
 
 type AddLectureDialogProps = {
@@ -120,6 +130,29 @@ export default function AddLectureDialog({ onLectureAdded }: AddLectureDialogPro
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="year"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>الفرقة الدراسية</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="اختر الفرقة الدراسية" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="first">الفرقة الأولى</SelectItem>
+                      <SelectItem value="second">الفرقة الثانية</SelectItem>
+                      <SelectItem value="third">الفرقة الثالثة</SelectItem>
+                      <SelectItem value="fourth">الفرقة الرابعة</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

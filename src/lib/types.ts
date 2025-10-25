@@ -8,12 +8,15 @@ export interface AppUser extends FirebaseUser {
   createdAt: Timestamp;
 }
 
+export type LectureYear = "first" | "second" | "third" | "fourth";
+
 export type Lecture = {
   id: string;
   title: string;
   description: string;
   pdfUrl: string;
   createdAt: Timestamp;
+  year: LectureYear;
 };
 
 export type Student = {
