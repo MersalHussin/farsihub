@@ -22,6 +22,8 @@ import { Loader2, Trash2, BookCopy } from "lucide-react";
 import AddSubjectDialog from "./add-subject-dialog";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
 const yearMap: Record<LectureYear, string> = {
   first: "الفرقة الأولى",
@@ -40,23 +42,32 @@ export default function SubjectsPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchSubjects = useCallback(async () => {
+  const fetchSubjects = useCallback(() => {
     setLoading(true);
-    try {
-      const q = query(collection(db, "subjects"), orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const subjectsList: Subject[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-      setSubjects(subjectsList);
-    } catch (error) {
-      console.error("Error fetching subjects: ", error);
-      toast({
-        variant: "destructive",
-        title: "فشل تحميل المواد",
-        description: "حدث خطأ أثناء جلب بيانات المواد الدراسية.",
+    const subjectsCollection = collection(db, "subjects");
+    const q = query(subjectsCollection, orderBy("createdAt", "desc"));
+    
+    getDocs(q)
+      .then(querySnapshot => {
+        const subjectsList: Subject[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+        setSubjects(subjectsList);
+      })
+      .catch(error => {
+        const permissionError = new FirestorePermissionError({
+          path: subjectsCollection.path,
+          operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error fetching subjects: ", error);
+        toast({
+          variant: "destructive",
+          title: "فشل تحميل المواد",
+          description: "حدث خطأ أثناء جلب بيانات المواد الدراسية.",
+        });
+      })
+      .finally(() => {
+        setLoading(false);
       });
-    } finally {
-      setLoading(false);
-    }
   }, [toast]);
 
   useEffect(() => {
