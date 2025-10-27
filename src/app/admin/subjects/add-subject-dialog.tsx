@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { setDoc, doc, serverTimestamp, collection } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -77,38 +77,33 @@ export default function AddSubjectDialog({ onSubjectAdded }: AddSubjectDialogPro
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const subjectData = {
-      ...values,
-      createdAt: serverTimestamp(),
-    };
-    
-    addDoc(collection(db, "subjects"), subjectData)
-      .then(() => {
+    try {
+        const newSubjectRef = doc(collection(db, "subjects"));
+        const subjectData = {
+            ...values,
+            createdAt: serverTimestamp(),
+            id: newSubjectRef.id,
+        };
+
+        await setDoc(newSubjectRef, subjectData);
+        
         toast({
-          title: "تمت إضافة المادة",
-          description: "تمت إضافة المادة الدراسية بنجاح.",
+            title: "تمت إضافة المادة",
+            description: "تمت إضافة المادة الدراسية بنجاح.",
         });
         form.reset();
         setIsOpen(false);
         onSubjectAdded();
-      })
-      .catch((error) => {
-        const permissionError = new FirestorePermissionError({
-          path: "subjects",
-          operation: 'create',
-          requestResourceData: subjectData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
+    } catch (error) {
         console.error("Error adding subject: ", error);
         toast({
-          variant: "destructive",
-          title: "فشل إضافة المادة",
-          description: "حدث خطأ أثناء إضافة المادة.",
+            variant: "destructive",
+            title: "فشل إضافة المادة",
+            description: "حدث خطأ أثناء إضافة المادة.",
         });
-      })
-      .finally(() => {
+    } finally {
         setIsLoading(false);
-      });
+    }
   }
 
   return (

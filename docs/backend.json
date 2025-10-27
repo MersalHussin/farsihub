@@ -91,35 +91,19 @@
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/user" },
-      "description": "User profile data. Only admins or the user themselves can access this data.",
-      "rules": {
-        "read": "isAdmin() || isOwner(userId)",
-        "write": "isAdmin() || isOwner(userId)"
-      }
+      "description": "User profile data. Only admins or the user themselves can access this data."
     },
     "/subjects/{subjectId}": {
       "schema": { "$ref": "#/entities/subject" },
-      "description": "Course subjects. Admins can manage them, students can read them.",
-      "rules": {
-        "read": "isSignedIn()",
-        "write": "isAdmin()"
-      }
+      "description": "Course subjects. Admins can manage them, students can read them."
     },
     "/lectures/{lectureId}": {
       "schema": { "$ref": "#/entities/lecture" },
-      "description": "Lectures for subjects. Admins can manage them, students can read them.",
-      "rules": {
-        "read": "isSignedIn()",
-        "write": "isAdmin()"
-      }
+      "description": "Lectures for subjects. Admins can manage them, students can read them."
     },
     "/quizSubmissions/{submissionId}": {
       "schema": { "$ref": "#/entities/quizSubmission" },
-      "description": "Student quiz submissions. Students can create their own, and read their own. Admins can read all.",
-      "rules": {
-        "read": "isAdmin() || isOwner(resource.data.userId)",
-        "create": "isOwner(request.resource.data.userId)"
-      }
+      "description": "Student quiz submissions. Students can create their own, and read their own. Admins can read all."
     }
   },
   "securityRules": {
@@ -129,9 +113,23 @@
       "function isAdmin() { return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }"
     ],
     "rules": {
+      "users": {
+        "{userId}": {
+          ".read": "isAdmin() || isOwner(userId)",
+          ".write": "isAdmin() || isOwner(userId)"
+        }
+      },
       "subjects": {
         ".read": "isSignedIn()",
         ".write": "isAdmin()"
+      },
+      "lectures": {
+        ".read": "isSignedIn()",
+        ".write": "isAdmin()"
+      },
+      "quizSubmissions": {
+        ".read": "isAdmin() || isOwner(resource.data.userId)",
+        ".create": "isOwner(request.resource.data.userId)"
       }
     }
   }
