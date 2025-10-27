@@ -52,20 +52,16 @@ export default function SubjectsPage() {
       setSubjects(subjectsList);
     } catch (error) {
         console.error("Error fetching subjects: ", error);
+        // This will now throw a contextual error for debugging security rules
         const permissionError = new FirestorePermissionError({
           path: 'subjects',
           operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-          variant: "destructive",
-          title: "فشل تحميل المواد",
-          description: "حدث خطأ أثناء جلب بيانات المواد الدراسية. قد تكون هناك مشكلة في صلاحيات الوصول.",
-        });
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   useEffect(() => {
     fetchSubjects();
