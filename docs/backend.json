@@ -92,47 +92,26 @@
   "firestore": {
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/user" },
-      "description": "User profile data. Only admins or the user themselves can access this data."
+      "description": "User profile data."
     },
     "/subjects/{subjectId}": {
       "schema": { "$ref": "#/entities/subject" },
-      "description": "Course subjects. Admins can manage them, students can read them."
+      "description": "Course subjects."
     },
     "/lectures/{lectureId}": {
       "schema": { "$ref": "#/entities/lecture" },
-      "description": "Lectures for subjects. Admins can manage them, students can read them."
+      "description": "Lectures for subjects."
     },
     "/quizSubmissions/{submissionId}": {
       "schema": { "$ref": "#/entities/quizSubmission" },
-      "description": "Student quiz submissions. Students can create their own, and read their own. Admins can read all."
+      "description": "Student quiz submissions."
     }
   },
   "securityRules": {
-    "functions": [
-      "function isSignedIn() { return request.auth != null; }",
-      "function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }",
-      "function isAdmin() { return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }"
-    ],
     "rules": {
-      "users": {
-        "{userId}": {
-          ".read": "isAdmin() || isOwner(userId)",
-          ".write": "isAdmin() || isOwner(userId)"
-        }
-      },
-      "subjects": {
-        ".read": "isSignedIn()",
-        ".write": "isAdmin()"
-      },
-      "lectures": {
-        ".read": "isSignedIn()",
-        ".write": "isAdmin()"
-      },
-      "quizSubmissions": {
-        ".create": "isOwner(request.resource.data.userId)",
-        "{submissionId}": {
-          ".read": "isAdmin() || isOwner(resource.data.userId)"
-        }
+      "{document=**}": {
+        ".read": "true",
+        ".write": "true"
       }
     }
   }
