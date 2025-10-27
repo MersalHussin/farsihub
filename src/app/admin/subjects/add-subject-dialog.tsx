@@ -77,33 +77,41 @@ export default function AddSubjectDialog({ onSubjectAdded }: AddSubjectDialogPro
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    try {
-        const newSubjectRef = doc(collection(db, "subjects"));
-        const subjectData = {
-            ...values,
-            createdAt: serverTimestamp(),
-            id: newSubjectRef.id,
-        };
+    
+    const newSubjectRef = doc(collection(db, "subjects"));
+    const subjectData = {
+        ...values,
+        createdAt: serverTimestamp(),
+        id: newSubjectRef.id,
+    };
 
-        await setDoc(newSubjectRef, subjectData);
-        
-        toast({
-            title: "تمت إضافة المادة",
-            description: "تمت إضافة المادة الدراسية بنجاح.",
+    setDoc(newSubjectRef, subjectData)
+        .then(() => {
+            toast({
+                title: "تمت إضافة المادة",
+                description: "تمت إضافة المادة الدراسية بنجاح.",
+            });
+            form.reset();
+            setIsOpen(false);
+            onSubjectAdded();
+        })
+        .catch((error) => {
+            console.error("Error adding subject: ", error);
+            const permissionError = new FirestorePermissionError({
+                path: newSubjectRef.path,
+                operation: 'create',
+                requestResourceData: subjectData,
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            toast({
+                variant: "destructive",
+                title: "فشل إضافة المادة",
+                description: "حدث خطأ أثناء إضافة المادة.",
+            });
+        })
+        .finally(() => {
+            setIsLoading(false);
         });
-        form.reset();
-        setIsOpen(false);
-        onSubjectAdded();
-    } catch (error) {
-        console.error("Error adding subject: ", error);
-        toast({
-            variant: "destructive",
-            title: "فشل إضافة المادة",
-            description: "حدث خطأ أثناء إضافة المادة.",
-        });
-    } finally {
-        setIsLoading(false);
-    }
   }
 
   return (

@@ -42,32 +42,29 @@ export default function SubjectsPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchSubjects = useCallback(() => {
+  const fetchSubjects = useCallback(async () => {
     setLoading(true);
-    const subjectsCollection = collection(db, "subjects");
-    const q = query(subjectsCollection, orderBy("createdAt", "desc"));
-    
-    getDocs(q)
-      .then(querySnapshot => {
-        const subjectsList: Subject[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-        setSubjects(subjectsList);
-      })
-      .catch(error => {
+    try {
+      const subjectsCollection = collection(db, "subjects");
+      const q = query(subjectsCollection, orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      const subjectsList: Subject[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+      setSubjects(subjectsList);
+    } catch (error) {
+        console.error("Error fetching subjects: ", error);
         const permissionError = new FirestorePermissionError({
-          path: subjectsCollection.path,
+          path: 'subjects',
           operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        console.error("Error fetching subjects: ", error);
         toast({
           variant: "destructive",
           title: "فشل تحميل المواد",
-          description: "حدث خطأ أثناء جلب بيانات المواد الدراسية.",
+          description: "حدث خطأ أثناء جلب بيانات المواد الدراسية. قد تكون هناك مشكلة في صلاحيات الوصول.",
         });
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    } finally {
+      setLoading(false);
+    }
   }, [toast]);
 
   useEffect(() => {
@@ -75,20 +72,21 @@ export default function SubjectsPage() {
   }, [fetchSubjects]);
 
   const handleDelete = async (subjectId: string) => {
-    // TODO: Add logic to delete related lectures and quizzes.
-    try {
-      await deleteDoc(doc(db, "subjects", subjectId));
-      toast({
-        title: "تم حذف المادة",
+    const subjectDocRef = doc(db, "subjects", subjectId);
+    deleteDoc(subjectDocRef)
+      .then(() => {
+        toast({ title: "تم حذف المادة" });
+        fetchSubjects();
+      })
+      .catch((error) => {
+        console.error("Error deleting subject: ", error);
+        const permissionError = new FirestorePermissionError({
+          path: subjectDocRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({ variant: "destructive", title: "فشل حذف المادة" });
       });
-      fetchSubjects();
-    } catch (error) {
-      console.error("Error deleting subject: ", error);
-      toast({
-        variant: "destructive",
-        title: "فشل حذف المادة",
-      });
-    }
   };
 
   return (
