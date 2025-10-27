@@ -53,6 +53,10 @@ const formSchema = z.object({
   title: z.string().min(3, { message: "يجب أن يتكون العنوان من 3 أحرف على الأقل." }),
   description: z.string().min(10, { message: "يجب أن يتكون الوصف من 10 أحرف على الأقل." }),
   pdfUrl: z.string().url({ message: "الرجاء إدخال رابط صالح." }),
+  subject: z.string().min(2, { message: "يجب إدخال اسم المادة." }),
+  semester: z.enum(["first", "second"], {
+    required_error: "الرجاء تحديد الفصل الدراسي.",
+  }),
   year: z.enum(["first", "second", "third", "fourth"], {
     required_error: "الرجاء تحديد الفرقة الدراسية.",
   }),
@@ -87,6 +91,7 @@ export default function AddLectureDialog({ onLectureAdded }: AddLectureDialogPro
       title: "",
       description: "",
       pdfUrl: "",
+      subject: "",
       hasQuiz: false,
       quiz: {
         title: "",
@@ -110,6 +115,8 @@ export default function AddLectureDialog({ onLectureAdded }: AddLectureDialogPro
         description: values.description,
         pdfUrl: values.pdfUrl,
         year: values.year,
+        subject: values.subject,
+        semester: values.semester,
         createdAt: serverTimestamp(),
       };
 
@@ -185,27 +192,63 @@ export default function AddLectureDialog({ onLectureAdded }: AddLectureDialogPro
                     />
                     <FormField
                     control={form.control}
-                    name="year"
+                    name="subject"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>الفرقة الدراسية</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                            <SelectTrigger>
-                                <SelectValue placeholder="اختر الفرقة الدراسية" />
-                            </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                            <SelectItem value="first">الفرقة الأولى</SelectItem>
-                            <SelectItem value="second">الفرقة الثانية</SelectItem>
-                            <SelectItem value="third">الفرقة الثالثة</SelectItem>
-                            <SelectItem value="fourth">الفرقة الرابعة</SelectItem>
-                            </SelectContent>
-                        </Select>
+                        <FormLabel>اسم المادة</FormLabel>
+                        <FormControl>
+                            <Input {...field} placeholder="مثال: نصوص فارسية" />
+                        </FormControl>
                         <FormMessage />
                         </FormItem>
                     )}
                     />
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="year"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>الفرقة الدراسية</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="اختر الفرقة" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="first">الفرقة الأولى</SelectItem>
+                                    <SelectItem value="second">الفرقة الثانية</SelectItem>
+                                    <SelectItem value="third">الفرقة الثالثة</SelectItem>
+                                    <SelectItem value="fourth">الفرقة الرابعة</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="semester"
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>الفصل الدراسي</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                    <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="اختر الفصل" />
+                                    </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                    <SelectItem value="first">الفصل الأول</SelectItem>
+                                    <SelectItem value="second">الفصل الثاني</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
                     <FormField
                     control={form.control}
                     name="pdfUrl"
@@ -361,3 +404,5 @@ export default function AddLectureDialog({ onLectureAdded }: AddLectureDialogPro
     </Dialog>
   );
 }
+
+    

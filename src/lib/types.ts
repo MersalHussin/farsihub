@@ -10,6 +10,7 @@ export interface AppUser extends FirebaseUser {
 }
 
 export type LectureYear = "first" | "second" | "third" | "fourth";
+export type Semester = "first" | "second";
 
 export type Question = {
   text: string;
@@ -27,8 +28,10 @@ export type Lecture = {
   title: string;
   description: string;
   pdfUrl: string;
-  createdAt: Timestamp;
+  subject: string;
+  semester: Semester;
   year: LectureYear;
+  createdAt: Timestamp;
   quiz?: Quiz;
 };
 
@@ -41,3 +44,5 @@ export type Student = {
     createdAt: Date;
     year?: LectureYear;
 }
+
+    
