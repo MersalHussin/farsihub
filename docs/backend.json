@@ -128,8 +128,10 @@
         ".write": "isAdmin()"
       },
       "quizSubmissions": {
-        ".read": "isAdmin() || (isOwner(resource.data.userId) && resource.data.userId == request.auth.uid)",
-        ".create": "isOwner(request.resource.data.userId)"
+        ".create": "isOwner(request.resource.data.userId)",
+        "{submissionId}": {
+          ".read": "isAdmin() || isOwner(resource.data.userId)"
+        }
       }
     }
   }
