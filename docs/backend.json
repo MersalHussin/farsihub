@@ -101,7 +101,8 @@
       "schema": { "$ref": "#/entities/subject" },
       "description": "Course subjects. Admins can manage them, students can read them.",
       "rules": {
-        "read": "isSignedIn()",
+        "list": "isSignedIn()",
+        "get": "isSignedIn()",
         "write": "isAdmin()"
       }
     },
