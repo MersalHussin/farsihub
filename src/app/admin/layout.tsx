@@ -25,7 +25,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 const navItems = [
   { href: '/admin/subjects', label: 'المواد الدراسية', icon: Library },
-  { href: '/admin/lectures', label: 'المحاضرات', icon: BookCopy },
   { href: '/admin/students', label: 'الطلاب', icon: Users },
   { href: '/admin/assignments', label: 'التكليفات', icon: ClipboardCheck },
 ];

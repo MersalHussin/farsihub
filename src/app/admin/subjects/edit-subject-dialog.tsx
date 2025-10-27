@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { setDoc, doc, serverTimestamp, collection } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -35,8 +35,8 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, PlusCircle } from "lucide-react";
-import { LectureYear, Semester } from "@/lib/types";
+import { Loader2, Pencil } from "lucide-react";
+import { LectureYear, Semester, Subject } from "@/lib/types";
 
 const yearMap: Record<LectureYear, string> = {
   first: "الفرقة الأولى",
@@ -56,12 +56,12 @@ const formSchema = z.object({
   semester: z.enum(["first", "second"], { required_error: "الرجاء تحديد الفصل الدراسي."}),
 });
 
-
-type AddSubjectDialogProps = {
-  onSubjectAdded: () => void;
+type EditSubjectDialogProps = {
+  subject: Subject;
+  onSubjectUpdated: () => void;
 };
 
-export default function AddSubjectDialog({ onSubjectAdded }: AddSubjectDialogProps) {
+export default function EditSubjectDialog({ subject, onSubjectUpdated }: EditSubjectDialogProps) {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -69,36 +69,31 @@ export default function AddSubjectDialog({ onSubjectAdded }: AddSubjectDialogPro
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
+      name: subject.name,
+      year: subject.year,
+      semester: subject.semester,
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
-    const newSubjectRef = doc(collection(db, "subjects"));
-    const subjectData = {
-        ...values,
-        createdAt: serverTimestamp(),
-        id: newSubjectRef.id,
-    };
-
-    setDoc(newSubjectRef, subjectData)
+    const subjectRef = doc(db, "subjects", subject.id);
+    updateDoc(subjectRef, values)
         .then(() => {
             toast({
-                title: "تمت إضافة المادة",
-                description: "تمت إضافة المادة الدراسية بنجاح.",
+                title: "تم تحديث المادة",
+                description: "تم تحديث بيانات المادة بنجاح.",
             });
-            form.reset();
             setIsOpen(false);
-            onSubjectAdded();
+            onSubjectUpdated();
         })
         .catch((error) => {
-            console.error("Error adding subject: ", error);
+            console.error("Error updating subject: ", error);
             toast({
                 variant: "destructive",
-                title: "فشل إضافة المادة",
-                description: "حدث خطأ أثناء إضافة المادة.",
+                title: "فشل تحديث المادة",
+                description: "حدث خطأ أثناء تحديث المادة.",
             });
         })
         .finally(() => {
@@ -109,16 +104,15 @@ export default function AddSubjectDialog({ onSubjectAdded }: AddSubjectDialogPro
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <PlusCircle className="ml-2 h-4 w-4" />
-          إضافة مادة
+        <Button variant="outline" size="icon">
+            <Pencil className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>إضافة مادة دراسية جديدة</DialogTitle>
+          <DialogTitle>تعديل المادة الدراسية</DialogTitle>
           <DialogDescription>
-            أدخل تفاصيل المادة الجديدة.
+            قم بتحديث تفاصيل المادة.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -191,7 +185,7 @@ export default function AddSubjectDialog({ onSubjectAdded }: AddSubjectDialogPro
                 </DialogClose>
                 <Button type="submit" disabled={isLoading}>
                 {isLoading && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-                إضافة
+                حفظ التعديلات
                 </Button>
             </DialogFooter>
           </form>

@@ -18,10 +18,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2, FileQuestion, ArrowRight } from "lucide-react";
+import { Loader2, Trash2, FileQuestion, ArrowRight, Pencil } from "lucide-react";
 import AddLectureDialog from "./add-lecture-dialog";
 import Link from "next/link";
 import { useSearchParams, useRouter } from 'next/navigation';
+import EditLectureDialog from "./edit-lecture-dialog";
 
 export default function LecturesPage() {
   const [lectures, setLectures] = useState<Lecture[]>([]);
@@ -145,6 +146,7 @@ export default function LecturesPage() {
                   </Link>
                 </Button>
                 <div className="flex gap-2">
+                    <EditLectureDialog subject={subject!} lecture={lecture} onLectureUpdated={fetchLecturesAndSubject} />
                     <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="icon">

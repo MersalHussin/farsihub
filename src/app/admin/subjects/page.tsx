@@ -18,12 +18,11 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Trash2, BookCopy } from "lucide-react";
+import { Loader2, Trash2, BookCopy, Pencil } from "lucide-react";
 import AddSubjectDialog from "./add-subject-dialog";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { errorEmitter } from "@/lib/error-emitter";
-import { FirestorePermissionError } from "@/lib/errors";
+import EditSubjectDialog from "./edit-subject-dialog";
 
 const yearMap: Record<LectureYear, string> = {
   first: "الفرقة الأولى",
@@ -68,6 +67,7 @@ export default function SubjectsPage() {
 
   const handleDelete = async (subjectId: string) => {
     const subjectDocRef = doc(db, "subjects", subjectId);
+    // You might want to delete subcollections like lectures here as well
     deleteDoc(subjectDocRef)
       .then(() => {
         toast({ title: "تم حذف المادة" });
@@ -114,27 +114,30 @@ export default function SubjectsPage() {
                     عرض المحاضرات
                   </Link>
                 </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        هذا الإجراء سيحذف المادة وجميع المحاضرات والاختبارات المرتبطة بها بشكل نهائي.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleDelete(subject.id)}>
-                        حذف
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                <div className="flex gap-2">
+                  <EditSubjectDialog subject={subject} onSubjectUpdated={fetchSubjects} />
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" size="icon">
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          هذا الإجراء سيحذف المادة وجميع المحاضرات والاختبارات المرتبطة بها بشكل نهائي.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleDelete(subject.id)}>
+                          حذف
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </CardFooter>
             </Card>
           ))}
