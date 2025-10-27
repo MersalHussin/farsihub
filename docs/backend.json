@@ -101,8 +101,7 @@
       "schema": { "$ref": "#/entities/subject" },
       "description": "Course subjects. Admins can manage them, students can read them.",
       "rules": {
-        "list": "isSignedIn()",
-        "get": "isSignedIn()",
+        "read": "isSignedIn()",
         "write": "isAdmin()"
       }
     },
@@ -128,6 +127,12 @@
       "function isSignedIn() { return request.auth != null; }",
       "function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }",
       "function isAdmin() { return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'; }"
-    ]
+    ],
+    "rules": {
+      "subjects": {
+        ".read": "isSignedIn()",
+        ".write": "isAdmin()"
+      }
+    }
   }
 }
