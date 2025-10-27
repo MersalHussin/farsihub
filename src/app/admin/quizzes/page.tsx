@@ -68,7 +68,7 @@ export default function QuizzesPage() {
     fetchQuizzes();
   }, [fetchQuizzes]);
   
-  const handleDelete = async (quizId: string) => {
+  const handleDelete = (quizId: string) => {
     const docRef = doc(db, "quizzes", quizId);
     deleteDoc(docRef)
       .then(() => {
@@ -84,11 +84,13 @@ export default function QuizzesPage() {
             operation: 'delete',
         });
         errorEmitter.emit('permission-error', permissionError);
-        console.error("Error deleting quiz: ", error);
+        // We don't console.error here because the listener will throw for us
+        // which gives a better debugging experience in Next.js.
+        // We still show a toast to the user.
         toast({
             variant: "destructive",
             title: "فشل حذف الاختبار",
-            description: "حدث خطأ أثناء حذف الاختبار.",
+            description: "ليست لديك الصلاحية لحذف هذا الاختبار.",
         });
     });
   };
@@ -142,7 +144,7 @@ export default function QuizzesPage() {
                             <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
                             <AlertDialogDescription>
                                 هذا الإجراء سيحذف الاختبار بشكل نهائي ولا يمكن التراجع عنه.
-                            </AlertDialogDescription>
+                            </Description>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
