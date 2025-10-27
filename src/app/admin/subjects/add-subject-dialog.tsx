@@ -37,6 +37,8 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, PlusCircle } from "lucide-react";
 import { LectureYear, Semester } from "@/lib/types";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
 const yearMap: Record<LectureYear, string> = {
   first: "الفرقة الأولى",
@@ -75,29 +77,38 @@ export default function AddSubjectDialog({ onSubjectAdded }: AddSubjectDialogPro
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    try {
-      await addDoc(collection(db, "subjects"), {
-        ...values,
-        createdAt: serverTimestamp(),
+    const subjectData = {
+      ...values,
+      createdAt: serverTimestamp(),
+    };
+    
+    addDoc(collection(db, "subjects"), subjectData)
+      .then(() => {
+        toast({
+          title: "تمت إضافة المادة",
+          description: "تمت إضافة المادة الدراسية بنجاح.",
+        });
+        form.reset();
+        setIsOpen(false);
+        onSubjectAdded();
+      })
+      .catch((error) => {
+        const permissionError = new FirestorePermissionError({
+          path: "subjects",
+          operation: 'create',
+          requestResourceData: subjectData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        console.error("Error adding subject: ", error);
+        toast({
+          variant: "destructive",
+          title: "فشل إضافة المادة",
+          description: "حدث خطأ أثناء إضافة المادة.",
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
       });
-      
-      toast({
-        title: "تمت إضافة المادة",
-        description: "تمت إضافة المادة الدراسية بنجاح.",
-      });
-      form.reset();
-      setIsOpen(false);
-      onSubjectAdded();
-    } catch (error) {
-      console.error("Error adding subject: ", error);
-      toast({
-        variant: "destructive",
-        title: "فشل إضافة المادة",
-        description: "حدث خطأ أثناء إضافة المادة.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
   }
 
   return (
