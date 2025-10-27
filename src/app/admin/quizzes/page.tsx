@@ -144,7 +144,7 @@ export default function QuizzesPage() {
                             <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
                             <AlertDialogDescription>
                                 هذا الإجراء سيحذف الاختبار بشكل نهائي ولا يمكن التراجع عنه.
-                            </Description>
+                            </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>إلغاء</AlertDialogCancel>
