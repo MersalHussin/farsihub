@@ -92,6 +92,24 @@
     "providers": ["email"]
   },
   "firestore": {
+    "indexes": [
+        {
+            "collectionGroup": "subjects",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "year", "order": "ASCENDING"},
+                {"fieldPath": "createdAt", "order": "DESCENDING"}
+            ]
+        },
+         {
+            "collectionGroup": "lectures",
+            "queryScope": "COLLECTION_GROUP",
+            "fields": [
+                {"fieldPath": "year", "order": "ASCENDING"},
+                {"fieldPath": "createdAt", "order": "DESCENDING"}
+            ]
+        }
+    ],
     "/users/{userId}": {
       "schema": { "$ref": "#/entities/user" },
       "description": "User profile data."
@@ -112,14 +130,8 @@
   "securityRules": {
     "rules": {
       "{document=**}": {
-        ".read": "isSignedIn()",
-        ".write": "isAdmin()"
-      },
-      "/users/{userId}": {
-        ".write": "isAdmin() || isOwner(userId)"
-      },
-      "/quizSubmissions/{submissionId}": {
-        ".write": "isSignedIn()"
+        ".read": "true",
+        ".write": "true"
       }
     }
   }

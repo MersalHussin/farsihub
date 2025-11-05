@@ -63,20 +63,32 @@ export default function LecturesPage() {
       const lecturesList: Lecture[] = lecturesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lecture));
       setLectures(lecturesList);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching data: ", error);
-      toast({
-        variant: "destructive",
-        title: "فشل تحميل البيانات",
-      });
+      if (error.code === 'failed-precondition') {
+        toast({
+            variant: "destructive",
+            title: "فهرسة مطلوبة",
+            description: "قاعدة البيانات تحتاج إلى فهرس للاستعلام. يتم إنشاؤه الآن تلقائياً وقد يستغرق بضع دقائق. يرجى المحاولة مرة أخرى قريباً.",
+        });
+      } else {
+        toast({
+            variant: "destructive",
+            title: "فشل تحميل البيانات",
+        });
+      }
     } finally {
       setLoading(false);
     }
   }, [toast, user?.year]);
 
   useEffect(() => {
-    fetchSubjectsAndLectures();
-  }, [fetchSubjectsAndLectures]);
+    if(user && user.approved) {
+        fetchSubjectsAndLectures();
+    } else {
+        setLoading(false);
+    }
+  }, [fetchSubjectsAndLectures, user]);
 
   const filteredSubjects = useMemo(() => {
     if (semesterFilter === "all") {
@@ -89,13 +101,43 @@ export default function LecturesPage() {
     return lectures.filter(lecture => lecture.subjectId === subjectId);
   }
 
-  const renderContent = () => {
+  const renderPageContent = () => {
     if (loading) {
-      return (
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </div>
-      );
+        return (
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="text-center text-muted-foreground py-24 border rounded-lg">
+               <p>يجب عليك تسجيل الدخول أولاً لعرض المحاضرات.</p>
+               <Button asChild className="mt-4">
+                   <Link href="/login">تسجيل الدخول</Link>
+               </Button>
+           </div>
+         );
+    }
+
+    if (!user.approved) {
+        return (
+            <div className="text-center text-muted-foreground py-24 border rounded-lg">
+               <p>حسابك قيد المراجعة. يجب التواصل مع الدعم لتفعيل حسابك.</p>
+           </div>
+         );
+    }
+
+    if (!user.year) {
+        return (
+            <div className="text-center text-muted-foreground py-24 border rounded-lg">
+               <p>الرجاء تحديد فرقتك الدراسية أولاً لعرض المحاضرات.</p>
+               <Button asChild className="mt-4">
+                   <Link href="/student/onboarding">تحديد الفرقة الدراسية</Link>
+               </Button>
+           </div>
+         );
     }
 
     if (filteredSubjects.length === 0) {
@@ -112,47 +154,56 @@ export default function LecturesPage() {
     }
     
     return (
-        <Accordion type="multiple" defaultValue={filteredSubjects.map(s => s.id)} className="w-full space-y-4">
-            {filteredSubjects.map((subject) => {
-                const subjectLectures = getLecturesForSubject(subject.id);
-                return (
-                    <AccordionItem value={subject.id} key={subject.id} className="border rounded-lg bg-card">
-                        <AccordionTrigger className="p-6 text-lg font-bold">
-                            <div className="flex items-center gap-3">
-                               <span>{subject.name}</span> 
-                               <Badge variant="secondary">{subjectLectures.length} محاضرات</Badge>
-                            </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-6 pt-0">
-                           {subjectLectures.length > 0 ? (
-                             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                {subjectLectures.map((lecture) => (
-                                     <Card key={lecture.id} className="flex flex-col">
-                                        <CardHeader>
-                                            <CardTitle>{lecture.title}</CardTitle>
-                                        </CardHeader>
-                                        <CardContent className="flex-grow">
-                                            <p className="text-muted-foreground line-clamp-3 h-14">{lecture.description}</p>
-                                        </CardContent>
-                                        <CardFooter>
-                                            <Button asChild className="w-full">
-                                                <Link href={`/lectures/${lecture.subjectId}/${lecture.id}`}>
-                                                <BookOpen className="ml-2 h-4 w-4" />
-                                                عرض التفاصيل
-                                                </Link>
-                                            </Button>
-                                        </CardFooter>
-                                    </Card>
-                                ))}
-                            </div>
-                           ) : (
-                            <p className="text-muted-foreground">لا توجد محاضرات لهذه المادة بعد.</p>
-                           )}
-                        </AccordionContent>
-                    </AccordionItem>
-                )
-            })}
-        </Accordion>
+        <>
+            <Tabs dir="rtl" value={semesterFilter} onValueChange={(value) => setSemesterFilter(value as any)} className="w-full">
+            <TabsList className="grid w-full grid-cols-3 max-w-sm">
+                <TabsTrigger value="all">الكل</TabsTrigger>
+                <TabsTrigger value="first">الفصل الأول</TabsTrigger>
+                <TabsTrigger value="second">الفصل الثاني</TabsTrigger>
+            </TabsList>
+            </Tabs>
+            <Accordion type="multiple" defaultValue={filteredSubjects.map(s => s.id)} className="w-full space-y-4">
+                {filteredSubjects.map((subject) => {
+                    const subjectLectures = getLecturesForSubject(subject.id);
+                    return (
+                        <AccordionItem value={subject.id} key={subject.id} className="border rounded-lg bg-card">
+                            <AccordionTrigger className="p-6 text-lg font-bold">
+                                <div className="flex items-center gap-3">
+                                   <span>{subject.name}</span> 
+                                   <Badge variant="secondary">{subjectLectures.length} محاضرات</Badge>
+                                </div>
+                            </AccordionTrigger>
+                            <AccordionContent className="p-6 pt-0">
+                               {subjectLectures.length > 0 ? (
+                                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                    {subjectLectures.map((lecture) => (
+                                         <Card key={lecture.id} className="flex flex-col">
+                                            <CardHeader>
+                                                <CardTitle>{lecture.title}</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="flex-grow">
+                                                <p className="text-muted-foreground line-clamp-3 h-14">{lecture.description}</p>
+                                            </CardContent>
+                                            <CardFooter>
+                                                <Button asChild className="w-full">
+                                                    <Link href={`/lectures/${lecture.subjectId}/${lecture.id}`}>
+                                                    <BookOpen className="ml-2 h-4 w-4" />
+                                                    عرض التفاصيل
+                                                    </Link>
+                                                </Button>
+                                            </CardFooter>
+                                        </Card>
+                                    ))}
+                                </div>
+                               ) : (
+                                <p className="text-muted-foreground">لا توجد محاضرات لهذه المادة بعد.</p>
+                               )}
+                            </AccordionContent>
+                        </AccordionItem>
+                    )
+                })}
+            </Accordion>
+        </>
     );
   };
 
@@ -170,25 +221,8 @@ export default function LecturesPage() {
             </p>
           </div>
           
-          {user?.year ? (
-            <>
-                <Tabs dir="rtl" value={semesterFilter} onValueChange={(value) => setSemesterFilter(value as any)} className="w-full">
-                <TabsList className="grid w-full grid-cols-3 max-w-sm">
-                    <TabsTrigger value="all">الكل</TabsTrigger>
-                    <TabsTrigger value="first">الفصل الأول</TabsTrigger>
-                    <TabsTrigger value="second">الفصل الثاني</TabsTrigger>
-                </TabsList>
-                </Tabs>
-                {renderContent()}
-            </>
-          ) : !loading && (
-             <div className="text-center text-muted-foreground py-24 border rounded-lg">
-                <p>يجب عليك تسجيل الدخول وتحديد فرقتك الدراسية أولاً لعرض المحاضرات.</p>
-                <Button asChild className="mt-4">
-                    <Link href="/login">تسجيل الدخول</Link>
-                </Button>
-            </div>
-          )}
+          {renderPageContent()}
+
         </div>
       </main>
       <Footer />
