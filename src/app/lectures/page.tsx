@@ -83,7 +83,7 @@ export default function LecturesPage() {
   }, [toast, user?.year]);
 
   useEffect(() => {
-    if(user && user.approved) {
+    if(user) {
         fetchSubjectsAndLectures();
     } else {
         setLoading(false);
@@ -217,7 +217,7 @@ export default function LecturesPage() {
               {user?.year ? `محاضرات ${yearMap[user.year]}` : "المحاضرات"}
             </h2>
             <p className="text-muted-foreground">
-              {user?.year ? "تصفح جميع المواد والمحاضرات المتاحة لك." : "يرجى تسجيل الدخول لعرض المحاضرات."}
+              {user ? "تصفح جميع المواد والمحاضرات المتاحة لك." : "يرجى تسجيل الدخول لعرض المحاضرات."}
             </p>
           </div>
           

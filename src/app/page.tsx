@@ -1,9 +1,12 @@
+"use client";
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, FileQuestion, Sparkles, ClipboardCheck } from 'lucide-react';
 import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { useAuth } from '@/hooks/use-auth';
 
 const features = [
   {
@@ -16,7 +19,7 @@ const features = [
     icon: <FileQuestion className="w-12 h-12 text-primary" />,
     title: 'الاختبارات',
     description: 'اختبر فهمك بعد كل محاضرة من خلال اختبارات قصيرة.',
-    href: '#',
+    href: '/lectures',
   },
     {
     icon: <ClipboardCheck className="w-12 h-12 text-primary" />,
@@ -33,6 +36,8 @@ const features = [
 ];
 
 export default function Home() {
+  const { user, loading } = useAuth();
+
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
@@ -46,12 +51,22 @@ export default function Home() {
               فارسي هب هي منصة تعليمية مخصصة لطلاب جامعة القاهرة لتتبع تقدمهم في تعلم اللغة الفارسية من خلال المحاضرات، والاختبارات، والتكليفات، وبرامج التطوير الذاتي.
             </p>
             <div className="flex justify-center gap-4">
-              <Button asChild size="lg" className="font-bold">
-                <Link href="/signup">سجل الآن</Link>
-              </Button>
-              <Button asChild size="lg" variant="secondary" className="font-bold">
-                <Link href="/login">تسجيل الدخول</Link>
-              </Button>
+              {!loading && (
+                user ? (
+                   <Button asChild size="lg" className="font-bold">
+                    <Link href="/dashboard">ابدأ الآن</Link>
+                  </Button>
+                ) : (
+                  <>
+                    <Button asChild size="lg" className="font-bold">
+                      <Link href="/signup">سجل الآن</Link>
+                    </Button>
+                    <Button asChild size="lg" variant="secondary" className="font-bold">
+                      <Link href="/login">تسجيل الدخول</Link>
+                    </Button>
+                  </>
+                )
+              )}
             </div>
           </div>
         </section>
