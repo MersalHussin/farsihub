@@ -129,9 +129,26 @@
   },
   "securityRules": {
     "rules": {
-      "{document=**}": {
-        ".read": "true",
-        ".write": "true"
+      "service cloud.firestore": {
+        "match /databases/{database}/documents": {
+          "// Helper functions": null,
+          "function isSignedIn()": "return request.auth != null;",
+          "function isOwner(userId)": "return request.auth.uid == userId;",
+          "function getUserData()": "return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;",
+          "function isAdmin()": "return isSignedIn() && getUserData().role == 'admin';",
+          "// Rules for collections": null,
+          "match /users/{userId}": {
+            "allow read, write": "if isSignedIn() && (isOwner(userId) || isAdmin());"
+          },
+          "match /subjects/{subjectId}/{document=**}": {
+            "allow read": "if isSignedIn();",
+            "allow write": "if isAdmin();"
+          },
+          "match /quizSubmissions/{submissionId}": {
+            "allow create": "if isSignedIn();",
+            "allow read": "if isSignedIn() && (isOwner(submissionId) || isAdmin());"
+          }
+        }
       }
     }
   }
