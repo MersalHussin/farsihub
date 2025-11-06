@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { addDoc, collection, serverTimestamp, doc } from "firebase/firestore";
+import { setDoc, collection, serverTimestamp, doc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -116,7 +116,7 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
         lectureData.quiz = values.quiz;
       }
 
-      await addDoc(lecturesCollectionRef, lectureData);
+      await setDoc(newLectureDocRef, lectureData);
       
       toast({
         title: "تمت إضافة المحاضرة",
@@ -338,3 +338,5 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
     </Dialog>
   );
 }
+
+    

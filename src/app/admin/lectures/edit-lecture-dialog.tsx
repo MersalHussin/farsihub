@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, deleteField } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
@@ -101,13 +101,8 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
         title: values.title,
         description: values.description,
         pdfUrl: values.pdfUrl,
+        quiz: values.hasQuiz && values.quiz ? values.quiz : deleteField(),
       };
-
-      if (values.hasQuiz && values.quiz) {
-        lectureData.quiz = values.quiz;
-      } else {
-        lectureData.quiz = null;
-      }
 
       await updateDoc(lectureDocRef, lectureData);
       
@@ -329,3 +324,5 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
     </Dialog>
   );
 }
+
+    
