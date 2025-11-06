@@ -13,9 +13,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 
 function PendingApprovalBanner() {
     return (
-        <div className="bg-destructive text-destructive-foreground p-2 text-center text-sm flex items-center justify-center gap-2">
+        <div className="bg-yellow-500 border-b border-yellow-600 text-yellow-950 p-2 text-center text-sm flex items-center justify-center gap-2">
             <AlertTriangle className="h-4 w-4" />
-            <span>حسابك قيد المراجعة. يجب التواصل مع الدعم لتفعيل حسابك.</span>
+            <span>حسابك قيد المراجعة. قد تكون بعض الميزات محدودة حتى تتم الموافقة على حسابك.</span>
         </div>
     );
 }
@@ -34,14 +34,14 @@ export function Header() {
   ];
 
   const NavLinks = ({ isMobile = false }) => (
-    <>
+    <nav className={cn("flex items-center gap-2", isMobile ? "flex-col" : "flex-row")}>
       {navItems.map((item) => (
         <Button
           key={item.href}
           variant="link"
           asChild
           className={cn(
-            'text-foreground/80 hover:text-foreground hover:no-underline',
+            'text-foreground/80 hover:text-foreground hover:no-underline font-semibold',
             { 'text-primary font-bold': pathname === item.href },
             isMobile && 'w-full justify-start text-base'
           )}
@@ -54,7 +54,7 @@ export function Header() {
           variant="link"
           asChild
           className={cn(
-            'text-foreground/80 hover:text-foreground hover:no-underline',
+            'text-foreground/80 hover:text-foreground hover:no-underline font-semibold',
              isMobile && 'w-full justify-start text-base'
           )}
         >
@@ -64,12 +64,12 @@ export function Header() {
           </Link>
         </Button>
       )}
-    </>
+    </nav>
   );
 
   const AuthArea = ({ isMobile = false }) => {
     if (loading) {
-      return null; // Or a loading spinner
+      return <div className='h-10 w-24' />; // Placeholder for loading state
     }
 
     if (user) {
@@ -78,7 +78,7 @@ export function Header() {
            <Button variant='outline' asChild className='w-full'>
             <Link href="/dashboard">حسابي</Link>
           </Button>
-          <Button onClick={logout} variant="default" className='w-full'>
+          <Button onClick={logout} variant="default" className='w-full mt-2'>
             تسجيل الخروج
           </Button>
         </div>
@@ -133,33 +133,46 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-card shadow-sm">
         {user && user.role === 'student' && !user.approved && <PendingApprovalBanner />}
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-            <BookHeart className="h-7 w-7 text-primary" />
-            <span>فارسي هب</span>
-            </Link>
-
+        <div className="container mx-auto flex h-16 items-center px-4">
             {isMobile ? (
-            <Sheet>
-                <SheetTrigger asChild>
-                <Button variant="outline" size="icon">
-                    <Menu className="h-6 w-6" />
-                    <span className="sr-only">Open menu</span>
-                </Button>
-                </SheetTrigger>
-                <SheetContent side="right">
-                <nav className="flex flex-col gap-2 mt-8">
-                    <NavLinks isMobile={true}/>
-                </nav>
-                <AuthArea isMobile={true}/>
-                </SheetContent>
-            </Sheet>
+                <>
+                    <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+                        <BookHeart className="h-7 w-7 text-primary" />
+                        <span>فارسي هب</span>
+                    </Link>
+                    <div className="mr-auto">
+                        <Sheet>
+                            <SheetTrigger asChild>
+                            <Button variant="outline" size="icon">
+                                <Menu className="h-6 w-6" />
+                                <span className="sr-only">Open menu</span>
+                            </Button>
+                            </SheetTrigger>
+                            <SheetContent side="right">
+                            <nav className="flex flex-col gap-2 mt-8">
+                                <NavLinks isMobile={true}/>
+                            </nav>
+                            <AuthArea isMobile={true}/>
+                            </SheetContent>
+                        </Sheet>
+                    </div>
+                </>
             ) : (
-            <div className='flex items-center gap-4'>
-                <nav className="flex items-center gap-2">
-                <NavLinks />
-                </nav>
-                <AuthArea />
+            <div className='flex items-center justify-between w-full'>
+                <div className='flex-1'>
+                    <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+                        <BookHeart className="h-7 w-7 text-primary" />
+                        <span>فارسي هب</span>
+                    </Link>
+                </div>
+
+                <div className='flex-1 flex justify-center'>
+                    <NavLinks />
+                </div>
+
+                <div className='flex-1 flex justify-end'>
+                    <AuthArea />
+                </div>
             </div>
             )}
         </div>

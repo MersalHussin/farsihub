@@ -42,26 +42,26 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-background">
       <Header />
       <main className="flex-grow">
-        <section className="text-center py-20 px-4 bg-card">
+        <section className="text-center py-20 lg:py-32 px-4 bg-card border-b">
           <div className="max-w-4xl mx-auto">
-            <h1 className="text-4xl md:text-5xl font-bold font-headline text-foreground mb-4">
-              أهلاً بك في فارسي هب
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold font-headline text-foreground mb-4 leading-tight">
+              أتقن الفارسية مع <span className='text-primary'>فارسي هب</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              فارسي هب هي منصة تعليمية مخصصة لطلاب جامعة القاهرة لتتبع تقدمهم في تعلم اللغة الفارسية من خلال المحاضرات، والاختبارات، والتكليفات، وبرامج التطوير الذاتي.
+              منصتك التعليمية المتكاملة لتتبع تقدمك في تعلم اللغة الفارسية من خلال المحاضرات، والاختبارات، والتكليفات، وبرامج التطوير الذاتي.
             </p>
-            <div className="flex justify-center gap-4">
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
               {!loading && (
                 user ? (
-                   <Button asChild size="lg" className="font-bold">
-                    <Link href="/dashboard">ابدأ الآن</Link>
+                   <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
+                    <Link href="/dashboard">اذهب إلى لوحة التحكم</Link>
                   </Button>
                 ) : (
                   <>
-                    <Button asChild size="lg" className="font-bold">
-                      <Link href="/signup">سجل الآن</Link>
+                    <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
+                      <Link href="/signup">ابدأ رحلتك الآن</Link>
                     </Button>
-                    <Button asChild size="lg" variant="secondary" className="font-bold">
+                    <Button asChild size="lg" variant="secondary" className="font-bold text-lg px-8 py-6">
                       <Link href="/login">تسجيل الدخول</Link>
                     </Button>
                   </>
@@ -71,18 +71,21 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="features" className="py-20 px-4">
+        <section id="features" className="py-20 lg:py-24 px-4">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center mb-12 font-headline">مميزات المنصة</h2>
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold font-headline">لماذا تختار فارسي هب؟</h2>
+              <p className="text-muted-foreground mt-2">كل ما تحتاجه للنجاح في مكان واحد.</p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
               {features.map((feature) => (
-                <Link href={feature.href} key={feature.title} className="block">
-                  <Card className="text-center transition-transform transform hover:-translate-y-2 hover:shadow-xl h-full">
+                <Link href={feature.href} key={feature.title} className="block group">
+                  <Card className="text-center transition-all duration-300 transform group-hover:-translate-y-2 group-hover:shadow-xl h-full border-2 border-transparent hover:border-primary/50">
                     <CardHeader>
-                      <div className="mx-auto bg-primary/10 rounded-full p-4 w-24 h-24 flex items-center justify-center mb-4">
+                      <div className="mx-auto bg-primary/10 rounded-full p-4 w-24 h-24 flex items-center justify-center mb-4 transition-colors duration-300 group-hover:bg-primary/20">
                         {feature.icon}
                       </div>
-                      <CardTitle className="font-headline">{feature.title}</CardTitle>
+                      <CardTitle className="font-headline text-xl">{feature.title}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       <p className="text-muted-foreground">{feature.description}</p>
