@@ -1,8 +1,8 @@
 "use client";
 
 import { createContext, useState, useEffect, ReactNode, useCallback } from 'react';
-import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, Timestamp } from 'firebase/firestore';
+import { onAuthStateChanged, User as FirebaseUser, deleteUser } from 'firebase/auth';
+import { doc, getDoc, Timestamp, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { AppUser } from '@/lib/types';
 import { useRouter } from 'next/navigation';
@@ -13,6 +13,7 @@ interface AuthContextType {
   loading: boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,7 +77,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   },[fetchUserData]);
 
-  const value = { user, loading, logout, refreshUser };
+  const deleteAccount = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+        throw new Error("No user is currently signed in.");
+    }
+    try {
+        // 1. Delete user document from Firestore
+        const userDocRef = doc(db, 'users', currentUser.uid);
+        await deleteDoc(userDocRef);
+
+        // 2. Delete user from Firebase Authentication
+        await deleteUser(currentUser);
+        
+        // Auth state will be updated by onAuthStateChanged listener
+    } catch (error) {
+        console.error("Error deleting account:", error);
+        // This might be a re-authentication error.
+        // For simplicity, we just throw, but in a real app you might handle re-authentication.
+        throw error;
+    }
+  };
+
+  const value = { user, loading, logout, refreshUser, deleteAccount };
 
   return (
     <AuthContext.Provider value={value}>
