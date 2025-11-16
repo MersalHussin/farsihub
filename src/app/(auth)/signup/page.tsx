@@ -80,6 +80,7 @@ export default function SignUpPage() {
         createdAt: serverTimestamp(),
         uid: user.uid,
         year: null,
+        photoURL: null,
       });
 
       toast({

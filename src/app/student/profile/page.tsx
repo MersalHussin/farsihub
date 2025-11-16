@@ -15,9 +15,17 @@ import { useRouter } from 'next/navigation';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import Image from 'next/image';
+import { LectureYear } from '@/lib/types';
 
 const boyAvatarUrl = 'https://i.suar.me/81XmV/l';
 const girlAvatarUrl = 'https://i.suar.me/j5Q7x/l';
+
+const yearMap: Record<LectureYear, string> = {
+  first: "الفرقة الأولى",
+  second: "الفرقة الثانية",
+  third: "الفرقة الثالثة",
+  fourth: "الفرقة الرابعة",
+};
 
 export default function StudentProfilePage() {
     const { user, deleteAccount, updateProfilePicture } = useAuth();
@@ -134,6 +142,7 @@ export default function StudentProfilePage() {
                     <h3 className="font-semibold mb-2">تفاصيل الحساب</h3>
                     <div className="space-y-1 text-sm text-muted-foreground">
                         <div><span className="font-medium text-foreground min-w-[80px] inline-block">الدور:</span> <Badge variant="secondary">طالب</Badge></div>
+                        {user.year && <div><span className="font-medium text-foreground min-w-[80px] inline-block">الفرقة:</span> <Badge variant="outline">{yearMap[user.year]}</Badge></div>}
                         <div>
                             <span className="font-medium text-foreground min-w-[80px] inline-block">الحالة:</span>
                             {user.approved ? (
