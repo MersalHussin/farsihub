@@ -33,6 +33,8 @@ service cloud.firestore {
     match /quizSubmissions/{submissionId} {
       allow create: if isSignedIn();
       allow read: if isSignedIn() && (isOwner(submissionId) || isAdmin());
+      // Allow students to list their own submissions for the achievements page.
+      allow list: if isSignedIn() && request.query.where.get("userId") == request.auth.uid;
     }
   }
 }

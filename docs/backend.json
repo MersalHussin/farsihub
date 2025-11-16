@@ -147,7 +147,8 @@
           },
           "match /quizSubmissions/{submissionId}": {
             "allow create": "if isSignedIn();",
-            "allow read": "if isSignedIn() && (isOwner(submissionId) || isAdmin());"
+            "allow read": "if isSignedIn() && (isOwner(submissionId) || isAdmin());",
+            "allow list": "if isSignedIn() && request.query.where.get(\"userId\") == request.auth.uid;"
           }
         }
       }
