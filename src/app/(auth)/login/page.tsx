@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -39,7 +40,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { user, loading } = useAuth();
+  const { user, loading, refreshUser } = useAuth();
 
   useEffect(() => {
     if (!loading && user) {
@@ -60,6 +61,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, values.email, values.password);
+      await refreshUser(); // Manually refresh user state
       toast({
         title: "تم تسجيل الدخول بنجاح",
         description: "سيتم توجيهك الآن...",
