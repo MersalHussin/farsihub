@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -88,14 +89,14 @@ export default function StudentProfilePage() {
                 <CardContent>
                     <h3 className="font-semibold mb-2">تفاصيل الحساب</h3>
                     <div className="space-y-1 text-sm text-muted-foreground">
-                        <p><span className="font-medium text-foreground min-w-[80px] inline-block">الدور:</span> <Badge variant="secondary">طالب</Badge></p>
-                        <p><span className="font-medium text-foreground min-w-[80px] inline-block">الحالة:</span> 
+                        <div><span className="font-medium text-foreground min-w-[80px] inline-block">الدور:</span> <Badge variant="secondary">طالب</Badge></div>
+                        <div><span className="font-medium text-foreground min-w-[80px] inline-block">الحالة:</span> 
                             {user.approved ? (
                                 <Badge className="bg-green-100 text-green-800 hover:bg-green-100">مُفعّل</Badge>
                             ) : (
                                 <Badge variant="destructive">قيد المراجعة</Badge>
                             )}
-                        </p>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
@@ -168,4 +169,3 @@ export default function StudentProfilePage() {
             </Card>
         </div>
     );
-}
