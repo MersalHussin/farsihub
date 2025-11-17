@@ -5,7 +5,7 @@ import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { Lecture, Subject, LectureYear } from "@/lib/types";
+import type { Lecture, Subject, LectureYear, Semester } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -90,6 +90,15 @@ export default function LecturesPage() {
     }
     return subjects.filter(subject => subject.semester === semesterFilter);
   }, [subjects, semesterFilter]);
+  
+  const semesterCounts = useMemo(() => {
+    return subjects.reduce((acc, subject) => {
+        if (subject.semester) {
+            acc[subject.semester] = (acc[subject.semester] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<Semester, number>);
+  }, [subjects]);
 
   const getLecturesForSubject = (subjectId: string) => {
     return lecturesBySubject[subjectId] || [];
@@ -134,14 +143,11 @@ export default function LecturesPage() {
          );
     }
 
-    if (filteredSubjects.length === 0) {
+    if (subjects.length === 0) {
       return (
         <div className="text-center text-muted-foreground py-12 border rounded-lg">
           <p>
-            {semesterFilter !== "all"
-              ? "لا توجد مواد دراسية متاحة لهذا الفصل الدراسي حالياً."
-              : "لا توجد مواد دراسية متاحة لفرقتك الدراسية حالياً."
-            }
+            لا توجد مواد دراسية متاحة لفرقتك الدراسية حالياً.
           </p>
         </div>
       );
@@ -149,15 +155,19 @@ export default function LecturesPage() {
     
     return (
         <>
-            <Tabs dir="rtl" value={semesterFilter} onValueChange={(value) => setSemesterFilter(value as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 max-w-sm">
-                <TabsTrigger value="all">الكل</TabsTrigger>
-                <TabsTrigger value="first">الفصل الأول</TabsTrigger>
-                <TabsTrigger value="second">الفصل الثاني</TabsTrigger>
-            </TabsList>
-            </Tabs>
+            <div className="flex justify-center">
+                <Tabs dir="rtl" value={semesterFilter} onValueChange={(value) => setSemesterFilter(value as any)}>
+                <TabsList className="grid w-full grid-cols-3 max-w-sm">
+                    <TabsTrigger value="all">الكل</TabsTrigger>
+                    <TabsTrigger value="first">الفصل الأول</TabsTrigger>
+                    <TabsTrigger value="second" disabled={!semesterCounts.second || semesterCounts.second === 0}>
+                        الفصل الثاني
+                    </TabsTrigger>
+                </TabsList>
+                </Tabs>
+            </div>
             <Accordion type="multiple" defaultValue={filteredSubjects.map(s => s.id)} className="w-full space-y-4">
-                {filteredSubjects.map((subject) => {
+                {filteredSubjects.length > 0 ? filteredSubjects.map((subject) => {
                     const subjectLectures = getLecturesForSubject(subject.id);
                     return (
                         <AccordionItem value={subject.id} key={subject.id} className="border rounded-lg bg-card">
@@ -195,7 +205,11 @@ export default function LecturesPage() {
                             </AccordionContent>
                         </AccordionItem>
                     )
-                })}
+                }) : (
+                     <div className="text-center text-muted-foreground py-12 border rounded-lg">
+                        <p>لا توجد مواد دراسية متاحة لهذا الفصل الدراسي حالياً.</p>
+                    </div>
+                )}
             </Accordion>
         </>
     );
