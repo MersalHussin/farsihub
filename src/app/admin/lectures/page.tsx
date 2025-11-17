@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs, query, orderBy, deleteDoc, doc, where, getDoc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, deleteDoc, doc, where, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import type { Lecture, Subject } from "@/lib/types";
@@ -23,6 +23,8 @@ import AddLectureDialog from "./add-lecture-dialog";
 import Link from "next/link";
 import { useSearchParams, useRouter } from 'next/navigation';
 import EditLectureDialog from "./edit-lecture-dialog";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
 export default function LecturesPage() {
   const [lectures, setLectures] = useState<Lecture[]>([]);
@@ -33,47 +35,73 @@ export default function LecturesPage() {
   const searchParams = useSearchParams();
   const subjectId = searchParams.get('subjectId');
 
-  const fetchLecturesAndSubject = useCallback(async () => {
+  const fetchLecturesAndSubject = useCallback(() => {
     if (!subjectId) {
       setLoading(false);
-      return;
+      return () => {};
     }
     setLoading(true);
-    try {
-      // Fetch Subject
-      const subjectRef = doc(db, "subjects", subjectId);
-      const subjectSnap = await getDoc(subjectRef);
-      if(subjectSnap.exists()) {
-          setSubject({ id: subjectSnap.id, ...subjectSnap.data() } as Subject);
-      } else {
-          toast({ variant: "destructive", title: "المادة غير موجودة" });
-          router.push("/admin/subjects");
-          return;
-      }
 
-      // Fetch Lectures
+    let subjectUnsubscribe: (() => void) | null = null;
+    let lecturesUnsubscribe: (() => void) | null = null;
+
+    try {
+      const subjectRef = doc(db, "subjects", subjectId);
+      subjectUnsubscribe = onSnapshot(subjectRef, (subjectSnap) => {
+        if(subjectSnap.exists()) {
+            setSubject({ id: subjectSnap.id, ...subjectSnap.data() } as Subject);
+        } else {
+            toast({ variant: "destructive", title: "المادة غير موجودة" });
+            router.push("/admin/subjects");
+            return;
+        }
+      }, (error) => {
+        console.error("Error fetching subject: ", error);
+        toast({ variant: "destructive", title: "فشل تحميل بيانات المادة" });
+        setLoading(false);
+      });
+
       const lecturesCollectionRef = collection(db, "subjects", subjectId, "lectures");
-      const q = query(
-        lecturesCollectionRef,
-        orderBy("createdAt", "desc")
-      );
-      const querySnapshot = await getDocs(q);
-      const lecturesList: Lecture[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lecture));
-      setLectures(lecturesList);
+      const q = query(lecturesCollectionRef, orderBy("createdAt", "desc"));
+      
+      lecturesUnsubscribe = onSnapshot(q, (querySnapshot) => {
+        const lecturesList: Lecture[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Lecture));
+        setLectures(lecturesList);
+        setLoading(false);
+      }, (error) => {
+         console.error("Error fetching lectures: ", error);
+        const permissionError = new FirestorePermissionError({
+            path: `subjects/${subjectId}/lectures`,
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        toast({
+          variant: "destructive",
+          title: "فشل تحميل المحاضرات",
+        });
+        setLoading(false);
+      });
+
     } catch (error) {
-      console.error("Error fetching data: ", error);
+      console.error("Error setting up listeners: ", error);
       toast({
         variant: "destructive",
         title: "فشل تحميل البيانات",
-        description: "حدث خطأ أثناء جلب بيانات المحاضرات والمادة.",
+        description: "حدث خطأ أثناء إعداد جلب البيانات.",
       });
-    } finally {
       setLoading(false);
     }
+    
+    return () => {
+      if (subjectUnsubscribe) subjectUnsubscribe();
+      if (lecturesUnsubscribe) lecturesUnsubscribe();
+    };
+
   }, [toast, subjectId, router]);
 
   useEffect(() => {
-    fetchLecturesAndSubject();
+    const unsubscribe = fetchLecturesAndSubject();
+    return () => unsubscribe();
   }, [fetchLecturesAndSubject]);
 
   const handleDelete = async (lectureId: string) => {
@@ -84,7 +112,7 @@ export default function LecturesPage() {
       toast({
         title: "تم حذف المحاضرة",
       });
-      fetchLecturesAndSubject();
+      // UI will update via snapshot listener
     } catch (error) {
       console.error("Error deleting lecture: ", error);
       toast({
@@ -115,7 +143,7 @@ export default function LecturesPage() {
             <h2 className="text-2xl font-bold">محاضرات مادة: {subject.name}</h2>
             <p className="text-muted-foreground">إضافة وتعديل المحاضرات التابعة لهذه المادة.</p>
           </div>
-          <AddLectureDialog onLectureAdded={fetchLecturesAndSubject} subject={subject} />
+          <AddLectureDialog onLectureAdded={() => {}} subject={subject} />
         </div>
       )}
 
@@ -146,7 +174,7 @@ export default function LecturesPage() {
                   </Link>
                 </Button>
                 <div className="flex gap-2">
-                    <EditLectureDialog subject={subject!} lecture={lecture} onLectureUpdated={fetchLecturesAndSubject} />
+                    <EditLectureDialog subject={subject!} lecture={lecture} onLectureUpdated={() => {}} />
                     <AlertDialog>
                     <AlertDialogTrigger asChild>
                         <Button variant="destructive" size="icon">

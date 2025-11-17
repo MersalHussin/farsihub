@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, getDocs, query, orderBy, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, query, orderBy, deleteDoc, doc, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import type { Subject, LectureYear, Semester } from "@/lib/types";
@@ -23,6 +23,8 @@ import AddSubjectDialog from "./add-subject-dialog";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import EditSubjectDialog from "./edit-subject-dialog";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
 const yearMap: Record<LectureYear, string> = {
   first: "الفرقة الأولى",
@@ -41,28 +43,40 @@ export default function SubjectsPage() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchSubjects = useCallback(async () => {
+  const fetchSubjects = useCallback(() => {
     setLoading(true);
-    try {
-      const subjectsCollection = collection(db, "subjects");
-      const q = query(subjectsCollection, orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
-      const subjectsList: Subject[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
-      setSubjects(subjectsList);
-    } catch (error) {
-      console.error("Error fetching subjects: ", error);
-      toast({
-        variant: "destructive",
-        title: "فشل تحميل المواد الدراسية",
-        description: "ليست لديك الصلاحية لعرض المواد. يرجى مراجعة قواعد الأمان في Firebase.",
-      });
-    } finally {
-      setLoading(false);
-    }
+    const subjectsCollection = collection(db, "subjects");
+    const q = query(subjectsCollection, orderBy("createdAt", "desc"));
+    
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
+        const subjectsList: Subject[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Subject));
+        setSubjects(subjectsList);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching subjects: ", error);
+        const permissionError = new FirestorePermissionError({
+            path: 'subjects',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+
+        toast({
+          variant: "destructive",
+          title: "فشل تحميل المواد الدراسية",
+          description: "ليست لديك الصلاحية لعرض المواد. يرجى مراجعة قواعد الأمان في Firebase.",
+        });
+        setLoading(false);
+      }
+    );
+
+    return unsubscribe;
   }, [toast]);
 
   useEffect(() => {
-    fetchSubjects();
+    const unsubscribe = fetchSubjects();
+    return () => unsubscribe();
   }, [fetchSubjects]);
 
   const handleDelete = async (subjectId: string) => {
@@ -71,7 +85,7 @@ export default function SubjectsPage() {
     deleteDoc(subjectDocRef)
       .then(() => {
         toast({ title: "تم حذف المادة" });
-        fetchSubjects();
+        // The onSnapshot listener will automatically update the UI
       })
       .catch((error) => {
         console.error("Error deleting subject: ", error);
@@ -86,7 +100,7 @@ export default function SubjectsPage() {
           <h2 className="text-2xl font-bold">إدارة المواد الدراسية</h2>
           <p className="text-muted-foreground">إضافة وتعديل المواد الدراسية التي تقدمها المنصة.</p>
         </div>
-        <AddSubjectDialog onSubjectAdded={fetchSubjects} />
+        <AddSubjectDialog onSubjectAdded={() => {}} />
       </div>
 
       {loading ? (
@@ -115,7 +129,7 @@ export default function SubjectsPage() {
                   </Link>
                 </Button>
                 <div className="flex gap-2">
-                  <EditSubjectDialog subject={subject} onSubjectUpdated={fetchSubjects} />
+                  <EditSubjectDialog subject={subject} onSubjectUpdated={() => {}} />
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button variant="destructive" size="icon">
