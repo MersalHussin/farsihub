@@ -24,7 +24,9 @@ service cloud.firestore {
     match /users/{userId} {
       allow get, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
       allow create: if isSignedIn();
-      allow list: if isAdmin();
+      // Temporary workaround to allow listing students.
+      // For better security, this should be restricted to admins using custom claims.
+      allow list: if isSignedIn();
     }
 
     match /subjects/{subjectId}/{document=**} {

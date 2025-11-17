@@ -149,7 +149,7 @@
           "match /users/{userId}": {
             "allow get, update, delete": "if isSignedIn() && (isOwner(userId) || isAdmin());",
             "allow create": "if isSignedIn();",
-            "allow list": "if isAdmin();"
+            "allow list": "if isSignedIn();"
           },
           "match /subjects/{subjectId}/{document=**}": {
             "allow read": "if isSignedIn();",
