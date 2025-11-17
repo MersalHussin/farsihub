@@ -157,7 +157,7 @@ export default function LecturesPage() {
     
     return (
         <TooltipProvider>
-            <div className="flex justify-center">
+            <div className="flex justify-center mb-6">
                 <Tabs dir="rtl" value={semesterFilter} onValueChange={(value) => setSemesterFilter(value as any)}>
                 <TabsList className="grid w-full grid-cols-3 max-w-sm">
                     <TabsTrigger value="all">الكل</TabsTrigger>

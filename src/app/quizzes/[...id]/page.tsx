@@ -138,7 +138,7 @@ export default function TakeQuizPage() {
     }
 
     const submissionData = {
-        quizId: lectureId,
+        quizId: lectureId, // Using lectureId as quizId for simplicity
         quizTitle: quiz.title,
         lectureId: lectureId,
         subjectId: subjectId,
@@ -172,10 +172,8 @@ export default function TakeQuizPage() {
   const handleRetakeQuiz = async () => {
     if (!existingSubmission) return;
     try {
-        const batch = writeBatch(db);
         const submissionRef = doc(db, "quizSubmissions", existingSubmission.id);
-        batch.delete(submissionRef);
-        await batch.commit();
+        await deleteDoc(submissionRef);
 
         // Reset state to start the quiz again
         setExistingSubmission(null);
