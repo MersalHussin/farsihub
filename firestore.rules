@@ -22,7 +22,9 @@ service cloud.firestore {
 
     // Rules for collections
     match /users/{userId} {
-      allow read, write: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow get, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create: if isSignedIn();
+      allow list: if isAdmin();
     }
 
     match /subjects/{subjectId}/{document=**} {
