@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
   Table,
@@ -26,10 +26,10 @@ export default function StudentsPage() {
   const { toast } = useToast();
 
   useEffect(() => {
-    async function fetchStudents() {
-      try {
-        const q = query(collection(db, "users"), where("role", "==", "student"), orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
+    const q = query(collection(db, "users"), where("role", "==", "student"), orderBy("createdAt", "desc"));
+    
+    const unsubscribe = onSnapshot(q, 
+      (querySnapshot) => {
         const studentsList: Student[] = querySnapshot.docs.map((doc) => {
           const data = doc.data();
           return {
@@ -42,18 +42,25 @@ export default function StudentsPage() {
           } as Student;
         });
         setStudents(studentsList);
-      } catch (error) {
+        setLoading(false);
+      }, 
+      async (error) => {
+        const permissionError = new FirestorePermissionError({
+            path: 'users',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         console.error("Error fetching students: ", error);
         toast({
           variant: "destructive",
           title: "فشل تحميل الطلاب",
           description: "حدث خطأ أثناء جلب بيانات الطلاب.",
         });
-      } finally {
         setLoading(false);
       }
-    }
-    fetchStudents();
+    );
+
+    return () => unsubscribe();
   }, [toast]);
 
   const handleApprovalChange = (studentId: string, approved: boolean) => {
@@ -61,26 +68,32 @@ export default function StudentsPage() {
     const updateData = { approved };
     updateDoc(studentRef, updateData)
       .then(() => {
-        setStudents((prevStudents) =>
-          prevStudents.map((student) =>
-            student.id === studentId ? { ...student, approved } : student
-          )
-        );
         toast({
           title: "تم تحديث الحالة",
           description: `تم ${approved ? 'قبول' : 'تعليق'} الطالب بنجاح.`,
         });
       })
       .catch(async (error) => {
+        // Revert UI change on error.
+        setStudents((prevStudents) =>
+          prevStudents.map((student) =>
+            student.id === studentId ? { ...student, approved: !approved } : student
+          )
+        );
         const permissionError = new FirestorePermissionError({
             path: studentRef.path,
             operation: 'update',
             requestResourceData: updateData,
         });
         errorEmitter.emit('permission-error', permissionError);
-        // UI is reverted optimistically on error by the listener now.
-        // No need for a toast here as the error listener will handle it.
     });
+    
+    // Optimistic UI update
+    setStudents((prevStudents) =>
+      prevStudents.map((student) =>
+        student.id === studentId ? { ...student, approved } : student
+      )
+    );
   };
 
   if (loading) {
