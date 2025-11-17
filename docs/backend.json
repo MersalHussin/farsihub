@@ -117,6 +117,14 @@
                 {"fieldPath": "role", "order": "ASCENDING"},
                 {"fieldPath": "createdAt", "order": "DESCENDING"}
             ]
+        },
+        {
+            "collectionGroup": "quizSubmissions",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {"fieldPath": "userId", "order": "ASCENDING"},
+                {"fieldPath": "lectureId", "order": "ASCENDING"}
+            ]
         }
     ],
     "/users/{userId}": {
