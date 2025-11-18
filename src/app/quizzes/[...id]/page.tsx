@@ -56,42 +56,57 @@ export default function TakeQuizPage() {
   const fetchLectureAndSubmission = useCallback(async () => {
     if (typeof subjectId !== 'string' || typeof lectureId !== 'string' || !user) return;
     setLoading(true);
-    try {
-      // Check for existing submission
-      const submissionQuery = query(
-        collection(db, "quizSubmissions"),
-        where("userId", "==", user.uid),
-        where("lectureId", "==", lectureId)
-      );
-      const submissionSnapshot = await getDocs(submissionQuery);
-      if (!submissionSnapshot.empty) {
-        const submissionDoc = submissionSnapshot.docs[0];
-        setExistingSubmission({ id: submissionDoc.id, score: submissionDoc.data().score });
-      }
+    
+    // Check for existing submission
+    const submissionQuery = query(
+      collection(db, "quizSubmissions"),
+      where("userId", "==", user.uid),
+      where("lectureId", "==", lectureId)
+    );
 
-      // Fetch lecture and quiz
-      const docRef = doc(db, "subjects", subjectId, "lectures", lectureId);
-      const docSnap = await getDoc(docRef);
-
-      if (docSnap.exists()) {
-        const lectureData = { id: docSnap.id, ...docSnap.data() } as Lecture;
-        setLecture(lectureData);
-        if (lectureData.quiz) {
-          setQuiz(lectureData.quiz);
-        } else {
-          toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
-          router.push(`/lectures/${subjectId}/${lectureId}`);
+    getDocs(submissionQuery).then(submissionSnapshot => {
+        if (!submissionSnapshot.empty) {
+            const submissionDoc = submissionSnapshot.docs[0];
+            setExistingSubmission({ id: submissionDoc.id, score: submissionDoc.data().score });
         }
-      } else {
-        toast({ variant: "destructive", title: "المحاضرة غير موجودة" });
-        router.push('/lectures');
-      }
-    } catch (error) {
-      console.error("Error fetching data: ", error);
-      toast({ variant: "destructive", title: "فشل تحميل البيانات" });
-    } finally {
-      setLoading(false);
-    }
+
+        // Fetch lecture and quiz
+        const docRef = doc(db, "subjects", subjectId, "lectures", lectureId);
+        getDoc(docRef).then(docSnap => {
+            if (docSnap.exists()) {
+                const lectureData = { id: docSnap.id, ...docSnap.data() } as Lecture;
+                setLecture(lectureData);
+                if (lectureData.quiz) {
+                    setQuiz(lectureData.quiz);
+                } else {
+                    toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
+                    router.push(`/lectures/${subjectId}/${lectureId}`);
+                }
+            } else {
+                toast({ variant: "destructive", title: "المحاضرة غير موجودة" });
+                router.push('/lectures');
+            }
+        }).catch(error => {
+            console.error("Error fetching lecture: ", error);
+            const permissionError = new FirestorePermissionError({
+                path: docRef.path,
+                operation: 'get',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        }).finally(() => {
+            setLoading(false);
+        });
+
+    }).catch(error => {
+        console.error("Error fetching submission: ", error);
+        const permissionError = new FirestorePermissionError({
+            path: 'quizSubmissions',
+            operation: 'list',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
+    });
+
   }, [subjectId, lectureId, user, toast, router]);
 
   useEffect(() => {
