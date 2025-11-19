@@ -16,7 +16,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Confetti from 'react-dom-confetti';
 import { errorEmitter } from "@/lib/error-emitter";
-import { FirestorePermissionError } from "@/lib/errors";
+import { FirestorePermissionError, type SecurityRuleContext } from "@/lib/errors";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -63,12 +63,20 @@ export default function TakeQuizPage() {
             where("userId", "==", user.uid),
             where("lectureId", "==", lectureId)
         );
-        const submissionSnapshot = await getDocs(submissionQuery);
-
-        if (!submissionSnapshot.empty) {
-            const submissionDoc = submissionSnapshot.docs[0];
-            setExistingSubmission({ id: submissionDoc.id, score: submissionDoc.data().score });
-        }
+        
+        getDocs(submissionQuery).then((submissionSnapshot) => {
+            if (!submissionSnapshot.empty) {
+                const submissionDoc = submissionSnapshot.docs[0];
+                setExistingSubmission({ id: submissionDoc.id, score: submissionDoc.data().score });
+            }
+        }).catch((error) => {
+            console.error("Error fetching submissions:", error);
+            const permissionError = new FirestorePermissionError({
+                path: 'quizSubmissions',
+                operation: 'list'
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+        });
 
         const docRef = doc(db, "subjects", subjectId, "lectures", lectureId);
         const docSnap = await getDoc(docRef);
@@ -121,7 +129,7 @@ export default function TakeQuizPage() {
     }
   };
   
-  const finishQuiz = async (finalAnswers: Record<number, string>) => {
+  const finishQuiz = (finalAnswers: Record<number, string>) => {
     if(!quiz || !user || !lecture || !subjectId || !lectureId) return;
     let correctCount = 0;
     quiz.questions.forEach((question, index) => {
@@ -161,11 +169,6 @@ export default function TakeQuizPage() {
                 requestResourceData: submissionData,
             });
             errorEmitter.emit('permission-error', permissionError);
-            toast({ 
-                variant: "destructive", 
-                title: "فشل تقديم الاختبار",
-                description: "ليس لديك الصلاحية لتقديم هذا الاختبار."
-            });
         });
   };
 
