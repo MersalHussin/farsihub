@@ -34,11 +34,19 @@ export default function TakeQuizPage() {
   const idParams = params.id || [];
   const [subjectId, lectureId] = idParams;
 
-  const fetchLectureAndQuiz = useCallback(async () => {
-    if (typeof subjectId !== 'string' || typeof lectureId !== 'string' || !user) {
+  const fetchLecture = useCallback(async () => {
+    if (!user) {
         setLoading(false);
+        router.push('/login');
+        return;
+    }
+    if (typeof subjectId !== 'string' || typeof lectureId !== 'string') {
+        setLoading(false);
+        toast({ variant: "destructive", title: "رابط غير صالح" });
+        router.push('/lectures');
         return;
     };
+
     setLoading(true);
     try {
         const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
@@ -66,12 +74,8 @@ export default function TakeQuizPage() {
   }, [subjectId, lectureId, user, toast, router]);
 
   useEffect(() => {
-    if (user) {
-        fetchLectureAndQuiz();
-    } else if (!user && !loading) {
-       router.push('/login');
-    }
-  }, [fetchLectureAndQuiz, user, loading, router]);
+    fetchLecture();
+  }, [fetchLecture]);
 
 
   const handleNextQuestion = () => {
