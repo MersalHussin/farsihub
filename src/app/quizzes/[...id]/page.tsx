@@ -59,6 +59,7 @@ export default function TakeQuizPage() {
     setLoading(true);
     
     try {
+        // Step 1: Fetch Lecture data
         const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
         const lectureSnap = await getDoc(lectureRef);
 
@@ -78,6 +79,7 @@ export default function TakeQuizPage() {
             return;
         }
 
+        // Step 2: Check for existing submission
         const submissionQuery = query(
             collection(db, "quizSubmissions"),
             where("userId", "==", user.uid),
@@ -91,7 +93,7 @@ export default function TakeQuizPage() {
             setIsFinished(true); // Mark as finished to show results
             setScore(submissionDoc.data().score);
         } else {
-            // Reset state if no submission is found
+            // Reset state if no submission is found to allow taking the quiz
             setExistingSubmission(null);
             setIsFinished(false);
             setCurrentQuestionIndex(0);
@@ -111,6 +113,8 @@ export default function TakeQuizPage() {
   useEffect(() => {
     if (user) {
         fetchLectureAndSubmission();
+    } else {
+      setLoading(false);
     }
   }, [fetchLectureAndSubmission, user]);
 
@@ -232,9 +236,9 @@ export default function TakeQuizPage() {
                     colors: ["#a864fd", "#29cdff", "#78ff44", "#ff718d", "#fdff6a"]
                  }}/>
                 <CardHeader>
-                    <CardTitle>لقد أكملت الاختبار!</CardTitle>
+                    <CardTitle>نتيجة الاختبار</CardTitle>
                     <CardDescription>
-                        {existingSubmission ? "هذه هي نتيجتك السابقة." : "هذه هي نتيجتك."}
+                        {existingSubmission ? "هذه هي نتيجتك السابقة في هذا الاختبار." : "هذه هي نتيجتك."}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
