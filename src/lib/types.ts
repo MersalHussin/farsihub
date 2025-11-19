@@ -53,3 +53,25 @@ export type Student = {
     createdAt: Date;
     year?: LectureYear;
 }
+
+export interface QuizSubmission {
+    id: string;
+    quizId: string;
+    quizTitle: string;
+    lectureId: string;
+    subjectId: string;
+    userId: string;
+    userName: string;
+    score: number;
+    answers: Record<number, string>;
+    submittedAt: Timestamp;
+}
+
+export interface Achievement {
+    id: string;
+    title: string;
+    description: string;
+    date: Date;
+    type: 'quiz' | 'lecture';
+    icon: React.ReactNode;
+}

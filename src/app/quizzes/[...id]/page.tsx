@@ -6,7 +6,7 @@ import { db } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { Lecture, Quiz } from "@/lib/types";
+import type { Lecture, Quiz, QuizSubmission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -26,11 +26,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
-interface Submission {
-    id: string;
-    score: number;
-}
 
 export default function TakeQuizPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -42,7 +40,7 @@ export default function TakeQuizPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [existingSubmission, setExistingSubmission] = useState<Submission | null>(null);
+  const [existingSubmission, setExistingSubmission] = useState<QuizSubmission | null>(null);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -59,7 +57,6 @@ export default function TakeQuizPage() {
     setLoading(true);
     
     try {
-        // Step 1: Fetch Lecture data
         const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
         const lectureSnap = await getDoc(lectureRef);
 
@@ -79,7 +76,6 @@ export default function TakeQuizPage() {
             return;
         }
 
-        // Step 2: Check for existing submission
         const submissionQuery = query(
             collection(db, "quizSubmissions"),
             where("userId", "==", user.uid),
@@ -89,11 +85,10 @@ export default function TakeQuizPage() {
         const submissionSnapshot = await getDocs(submissionQuery);
         if (!submissionSnapshot.empty) {
             const submissionDoc = submissionSnapshot.docs[0];
-            setExistingSubmission({ id: submissionDoc.id, score: submissionDoc.data().score });
-            setIsFinished(true); // Mark as finished to show results
+            setExistingSubmission({ id: submissionDoc.id, ...submissionDoc.data() } as QuizSubmission);
+            setIsFinished(true);
             setScore(submissionDoc.data().score);
         } else {
-            // Reset state if no submission is found to allow taking the quiz
             setExistingSubmission(null);
             setIsFinished(false);
             setCurrentQuestionIndex(0);
@@ -103,7 +98,11 @@ export default function TakeQuizPage() {
 
     } catch(error) {
         console.error("Error fetching data: ", error);
-        toast({ variant: "destructive", title: "فشل تحميل البيانات" });
+        if (error instanceof FirestorePermissionError) {
+             errorEmitter.emit('permission-error', error);
+        } else {
+             toast({ variant: "destructive", title: "فشل تحميل البيانات" });
+        }
     } finally {
         setLoading(false);
     }
@@ -113,10 +112,10 @@ export default function TakeQuizPage() {
   useEffect(() => {
     if (user) {
         fetchLectureAndSubmission();
-    } else {
-      setLoading(false);
+    } else if (!user && !loading) {
+       router.push('/login');
     }
-  }, [fetchLectureAndSubmission, user]);
+  }, [fetchLectureAndSubmission, user, loading, router]);
 
   const handleNextQuestion = () => {
     if (selectedAnswer === null) {
@@ -139,7 +138,7 @@ export default function TakeQuizPage() {
     }
   };
   
-  const finishQuiz = (finalAnswers: Record<number, string>) => {
+  const finishQuiz = async (finalAnswers: Record<number, string>) => {
     if(!quiz || !user || !lecture || !subjectId || !lectureId) return;
     let correctCount = 0;
     quiz.questions.forEach((question, index) => {
@@ -156,7 +155,7 @@ export default function TakeQuizPage() {
     }
 
     const submissionData = {
-        quizId: lectureId, // Using lectureId as quizId for simplicity
+        quizId: lectureId,
         quizTitle: quiz.title,
         lectureId: lectureId,
         subjectId: subjectId,
@@ -167,15 +166,18 @@ export default function TakeQuizPage() {
         submittedAt: serverTimestamp(),
     };
 
-    addDoc(collection(db, "quizSubmissions"), submissionData)
-        .then((docRef) => {
-            setExistingSubmission({ id: docRef.id, score: finalScore });
-            toast({ title: "تم تقديم الاختبار بنجاح!" });
-        })
-        .catch(async (error) => {
-             console.error("Error creating submission: ", error);
+    try {
+        const docRef = await addDoc(collection(db, "quizSubmissions"), submissionData);
+        setExistingSubmission({ id: docRef.id, ...submissionData } as QuizSubmission);
+        toast({ title: "تم تقديم الاختبار بنجاح!" });
+    } catch(error) {
+        console.error("Error creating submission: ", error);
+        if (error instanceof FirestorePermissionError) {
+             errorEmitter.emit('permission-error', error);
+        } else {
              toast({ variant: "destructive", title: "فشل حفظ نتيجتك." });
-        });
+        }
+    }
   };
 
   const handleRetakeQuiz = async () => {
@@ -184,7 +186,6 @@ export default function TakeQuizPage() {
         const submissionRef = doc(db, "quizSubmissions", existingSubmission.id);
         await deleteDoc(submissionRef);
 
-        // Reset state to start the quiz again
         setExistingSubmission(null);
         setCurrentQuestionIndex(0);
         setAnswers({});
@@ -195,7 +196,11 @@ export default function TakeQuizPage() {
         toast({ title: "يمكنك الآن إعادة الاختبار." });
     } catch(e: any) {
         console.error("Error deleting submission: ", e);
-        toast({ variant: "destructive", title: "فشل حذف النتيجة السابقة." });
+        if (e instanceof FirestorePermissionError) {
+            errorEmitter.emit('permission-error', e);
+        } else {
+            toast({ variant: "destructive", title: "فشل حذف النتيجة السابقة." });
+        }
     }
   }
 

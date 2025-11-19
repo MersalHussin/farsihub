@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
@@ -10,26 +10,7 @@ import { Loader2, FileQuestion, BookOpen, Trophy } from "lucide-react";
 import Link from "next/link";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
-
-interface Submission {
-    id: string;
-    quizTitle: string;
-    score: number;
-    submittedAt: {
-        toDate: () => Date;
-    };
-    lectureId: string;
-    subjectId: string;
-}
-
-interface Achievement {
-    id: string;
-    title: string;
-    description: string;
-    date: Date;
-    type: 'quiz' | 'lecture';
-    icon: React.ReactNode;
-}
+import { QuizSubmission, Achievement } from "@/lib/types";
 
 export default function StudentAchievementsPage() {
     const [achievements, setAchievements] = useState<Achievement[]>([]);
@@ -38,50 +19,39 @@ export default function StudentAchievementsPage() {
     const { toast } = useToast();
 
     const fetchAchievements = useCallback(async () => {
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        };
         setLoading(true);
         try {
-            // Fetch Quiz Completions
             const q = query(
                 collection(db, "quizSubmissions"),
                 where("userId", "==", user.uid),
                 orderBy("submittedAt", "desc")
             );
             const querySnapshot = await getDocs(q);
-            const quizAchievements = querySnapshot.docs.map(doc => {
-                const data = doc.data() as Submission;
+            const quizAchievements: Achievement[] = querySnapshot.docs.map(doc => {
+                const data = doc.data() as Omit<QuizSubmission, 'id'>;
+                const submittedAt = (data.submittedAt as unknown as Timestamp).toDate();
                 return {
                     id: `quiz-${doc.id}`,
                     title: `أكملت اختبار: ${data.quizTitle}`,
                     description: `أحرزت ${Math.round(data.score)}% في هذا الاختبار.`,
-                    date: data.submittedAt.toDate(),
+                    date: submittedAt,
                     type: 'quiz',
                     icon: <FileQuestion className="h-6 w-6 text-blue-500" />,
-                } as Achievement;
+                };
             });
             
-            // TODO: Fetch Lecture Views when implemented
-            const lectureAchievements: Achievement[] = [
-                // Example of what a lecture achievement would look like
-                // {
-                //     id: 'lecture-123',
-                //     title: 'ذاكرت محاضرة: مقدمة في الشعر الفارسي',
-                //     description: 'لقد أكملت استعراض هذه المحاضرة.',
-                //     date: new Date(),
-                //     type: 'lecture',
-                //     icon: <BookOpen className="h-6 w-6 text-green-500" />
-                // }
-            ];
-
-            const allAchievements = [...quizAchievements, ...lectureAchievements].sort((a, b) => b.date.getTime() - a.date.getTime());
-            
-            setAchievements(allAchievements);
+            setAchievements(quizAchievements.sort((a, b) => b.date.getTime() - a.date.getTime()));
 
         } catch (error) {
             console.error(error);
             toast({
                 variant: "destructive",
                 title: "فشل تحميل الإنجازات",
+                description: "قد تكون هناك مشكلة في صلاحيات الوصول."
             });
         } finally {
             setLoading(false);
@@ -89,8 +59,12 @@ export default function StudentAchievementsPage() {
     }, [user, toast]);
 
     useEffect(() => {
-        fetchAchievements();
-    }, [fetchAchievements]);
+        if (user) {
+            fetchAchievements();
+        } else if (!user && !loading) {
+            // Redirect or handle appropriately if user is not logged in
+        }
+    }, [fetchAchievements, user, loading]);
 
     return (
         <div className="space-y-6">
