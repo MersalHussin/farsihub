@@ -34,13 +34,12 @@ export default function TakeQuizPage() {
   const idParams = params.id || [];
   const [subjectId, lectureId] = idParams;
 
-   const fetchLecture = useCallback(async () => {
+  const fetchLectureAndQuiz = useCallback(async () => {
     if (typeof subjectId !== 'string' || typeof lectureId !== 'string' || !user) {
         setLoading(false);
         return;
     };
     setLoading(true);
-    
     try {
         const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
         const lectureSnap = await getDoc(lectureRef);
@@ -48,19 +47,17 @@ export default function TakeQuizPage() {
         if (lectureSnap.exists()) {
             const lectureData = { id: lectureSnap.id, ...lectureSnap.data() } as Lecture;
             setLecture(lectureData);
-            if(lectureData.quiz){
+            if (lectureData.quiz) {
                 setQuiz(lectureData.quiz);
             } else {
-                 toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
-                 router.push(`/lectures/${subjectId}/${lectureId}`);
-                 return;
+                toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
+                router.push(`/lectures/${subjectId}/${lectureId}`);
             }
         } else {
             toast({ variant: "destructive", title: "المحاضرة غير موجودة" });
             router.push('/lectures');
-            return;
         }
-    } catch(error) {
+    } catch (error) {
         console.error("Error fetching data: ", error);
         toast({ variant: "destructive", title: "فشل تحميل البيانات" });
     } finally {
@@ -68,14 +65,14 @@ export default function TakeQuizPage() {
     }
   }, [subjectId, lectureId, user, toast, router]);
 
-
   useEffect(() => {
     if (user) {
-        fetchLecture();
+        fetchLectureAndQuiz();
     } else if (!user && !loading) {
        router.push('/login');
     }
-  }, [fetchLecture, user, loading, router]);
+  }, [fetchLectureAndQuiz, user, loading, router]);
+
 
   const handleNextQuestion = () => {
     if (selectedAnswer === null) {
