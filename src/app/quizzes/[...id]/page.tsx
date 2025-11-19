@@ -53,7 +53,7 @@ export default function TakeQuizPage() {
   const idParams = params.id || [];
   const [subjectId, lectureId] = idParams;
 
-  const fetchLectureAndSubmission = useCallback(async () => {
+   const fetchLectureAndSubmission = useCallback(async () => {
     if (typeof subjectId !== 'string' || typeof lectureId !== 'string' || !user) {
         setLoading(false);
         return;
@@ -61,29 +61,25 @@ export default function TakeQuizPage() {
     setLoading(true);
     
     try {
-        // Step 1: Fetch the lecture data first
-        const docRef = doc(db, "subjects", subjectId, "lectures", lectureId);
-        const docSnap = await getDoc(docRef);
+        const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
+        const lectureSnap = await getDoc(lectureRef);
 
-        if (docSnap.exists()) {
-            const lectureData = { id: docSnap.id, ...docSnap.data() } as Lecture;
+        if (lectureSnap.exists()) {
+            const lectureData = { id: lectureSnap.id, ...lectureSnap.data() } as Lecture;
             setLecture(lectureData);
-            if (lectureData.quiz) {
+            if(lectureData.quiz){
                 setQuiz(lectureData.quiz);
             } else {
-                toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
-                router.push(`/lectures/${subjectId}/${lectureId}`);
-                setLoading(false);
-                return;
+                 toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
+                 router.push(`/lectures/${subjectId}/${lectureId}`);
+                 return;
             }
         } else {
             toast({ variant: "destructive", title: "المحاضرة غير موجودة" });
             router.push('/lectures');
-            setLoading(false);
             return;
         }
 
-        // Step 2: After successfully fetching the lecture, check for existing submission
         const submissionQuery = query(
             collection(db, "quizSubmissions"),
             where("userId", "==", user.uid),
@@ -99,13 +95,6 @@ export default function TakeQuizPage() {
     } catch(error) {
         console.error("Error fetching data: ", error);
         toast({ variant: "destructive", title: "فشل تحميل البيانات" });
-        if (error instanceof Error && error.message.includes('permission-denied')) {
-             const permissionError = new FirestorePermissionError({
-                path: 'quizSubmissions',
-                operation: 'list'
-            } satisfies SecurityRuleContext);
-            errorEmitter.emit('permission-error', permissionError);
-        }
     } finally {
         setLoading(false);
     }
@@ -313,7 +302,7 @@ export default function TakeQuizPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-lg font-semibold text-right">{question.text}</p>
-          <RadioGroup dir="rtl" value={selectedAnswer ?? undefined} onValueChange={setSelectedAnswer}>
+          <RadioGroup dir="rtl" value={selectedAnswer ?? ''} onValueChange={setSelectedAnswer}>
             {question.options.map((option, index) => (
               option && (
                 <Label key={index} htmlFor={`option-${index}`} className="flex items-center gap-4 text-base p-4 border rounded-md cursor-pointer hover:bg-muted/50 has-[:checked]:bg-muted has-[:checked]:border-primary">
