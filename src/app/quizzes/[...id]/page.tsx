@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { Lecture, Quiz, QuizSubmission } from "@/lib/types";
+import type { Lecture, Quiz } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -15,20 +15,6 @@ import { Loader2, ArrowRight } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Confetti from 'react-dom-confetti';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { errorEmitter } from "@/lib/error-emitter";
-import { FirestorePermissionError } from "@/lib/errors";
-
 
 export default function TakeQuizPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -40,7 +26,6 @@ export default function TakeQuizPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [existingSubmission, setExistingSubmission] = useState<QuizSubmission | null>(null);
 
   const { toast } = useToast();
   const router = useRouter();
@@ -49,7 +34,7 @@ export default function TakeQuizPage() {
   const idParams = params.id || [];
   const [subjectId, lectureId] = idParams;
 
-   const fetchLectureAndSubmission = useCallback(async () => {
+   const fetchLecture = useCallback(async () => {
     if (typeof subjectId !== 'string' || typeof lectureId !== 'string' || !user) {
         setLoading(false);
         return;
@@ -75,34 +60,9 @@ export default function TakeQuizPage() {
             router.push('/lectures');
             return;
         }
-
-        const submissionQuery = query(
-            collection(db, "quizSubmissions"),
-            where("userId", "==", user.uid),
-            where("lectureId", "==", lectureId)
-        );
-        
-        const submissionSnapshot = await getDocs(submissionQuery);
-        if (!submissionSnapshot.empty) {
-            const submissionDoc = submissionSnapshot.docs[0];
-            setExistingSubmission({ id: submissionDoc.id, ...submissionDoc.data() } as QuizSubmission);
-            setIsFinished(true);
-            setScore(submissionDoc.data().score);
-        } else {
-            setExistingSubmission(null);
-            setIsFinished(false);
-            setCurrentQuestionIndex(0);
-            setAnswers({});
-            setScore(0);
-        }
-
     } catch(error) {
         console.error("Error fetching data: ", error);
-        if (error instanceof FirestorePermissionError) {
-             errorEmitter.emit('permission-error', error);
-        } else {
-             toast({ variant: "destructive", title: "فشل تحميل البيانات" });
-        }
+        toast({ variant: "destructive", title: "فشل تحميل البيانات" });
     } finally {
         setLoading(false);
     }
@@ -111,11 +71,11 @@ export default function TakeQuizPage() {
 
   useEffect(() => {
     if (user) {
-        fetchLectureAndSubmission();
+        fetchLecture();
     } else if (!user && !loading) {
        router.push('/login');
     }
-  }, [fetchLectureAndSubmission, user, loading, router]);
+  }, [fetchLecture, user, loading, router]);
 
   const handleNextQuestion = () => {
     if (selectedAnswer === null) {
@@ -167,43 +127,13 @@ export default function TakeQuizPage() {
     };
 
     try {
-        const docRef = await addDoc(collection(db, "quizSubmissions"), submissionData);
-        setExistingSubmission({ id: docRef.id, ...submissionData } as QuizSubmission);
+        await addDoc(collection(db, "quizSubmissions"), submissionData);
         toast({ title: "تم تقديم الاختبار بنجاح!" });
     } catch(error) {
         console.error("Error creating submission: ", error);
-        if (error instanceof FirestorePermissionError) {
-             errorEmitter.emit('permission-error', error);
-        } else {
-             toast({ variant: "destructive", title: "فشل حفظ نتيجتك." });
-        }
+        toast({ variant: "destructive", title: "فشل حفظ نتيجتك." });
     }
   };
-
-  const handleRetakeQuiz = async () => {
-    if (!existingSubmission) return;
-    try {
-        const submissionRef = doc(db, "quizSubmissions", existingSubmission.id);
-        await deleteDoc(submissionRef);
-
-        setExistingSubmission(null);
-        setCurrentQuestionIndex(0);
-        setAnswers({});
-        setSelectedAnswer(null);
-        setIsFinished(false);
-        setScore(0);
-        setShowConfetti(false);
-        toast({ title: "يمكنك الآن إعادة الاختبار." });
-    } catch(e: any) {
-        console.error("Error deleting submission: ", e);
-        if (e instanceof FirestorePermissionError) {
-            errorEmitter.emit('permission-error', e);
-        } else {
-            toast({ variant: "destructive", title: "فشل حذف النتيجة السابقة." });
-        }
-    }
-  }
-
 
   const renderQuizContent = () => {
     if (loading) {
@@ -243,7 +173,7 @@ export default function TakeQuizPage() {
                 <CardHeader>
                     <CardTitle>نتيجة الاختبار</CardTitle>
                     <CardDescription>
-                        {existingSubmission ? "هذه هي نتيجتك السابقة في هذا الاختبار." : "هذه هي نتيجتك."}
+                       لقد أكملت الاختبار بنجاح.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -253,27 +183,6 @@ export default function TakeQuizPage() {
                     </p>
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row justify-center gap-4">
-                    {existingSubmission && (
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                               <Button variant="outline">إعادة الاختبار</Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        سيتم حذف نتيجتك السابقة بشكل نهائي وستبدأ الاختبار من جديد.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                    <AlertDialogAction onClick={handleRetakeQuiz}>
-                                        نعم، أعد الاختبار
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
                     <Button onClick={() => router.push(`/lectures/${lecture.subjectId}/${lecture.id}`)}>
                         <ArrowRight className="ml-2 h-4 w-4" />
                         العودة إلى المحاضرة
