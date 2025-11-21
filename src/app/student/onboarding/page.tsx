@@ -28,7 +28,7 @@ const girlAvatarUrl = 'https://i.suar.me/j5Q7x/l';
 
 
 export default function OnboardingPage() {
-  const { user, loading, logout, refreshUser } = useAuth();
+  const { user, loading, logout, refreshUser, updateProfilePicture } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = useState<LectureYear | null>(null);
@@ -59,14 +59,19 @@ export default function OnboardingPage() {
     }
     setIsSubmitting(true);
     try {
+      // We are updating both the user document and the auth profile picture
+      await updateProfilePicture(selectedAvatar);
+
       const db = getFirebaseDb();
-      const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, { 
-        year: selectedYear,
-        photoURL: selectedAvatar,
-      });
+      if(db) {
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, { 
+          year: selectedYear,
+          photoURL: selectedAvatar, // Save it to the document as well
+        });
+      }
       
-      // Manually refresh user context to get the new 'year'
+      // Manually refresh user context to get the new 'year' and 'photoURL'
       await refreshUser();
 
       toast({
@@ -77,12 +82,13 @@ export default function OnboardingPage() {
       router.push('/dashboard');
 
     } catch (error) {
-      console.error("Error updating user year: ", error);
+      console.error("Error updating user profile: ", error);
       toast({
         variant: "destructive",
         title: "فشل حفظ البيانات",
         description: "حدث خطأ ما، يرجى المحاولة مرة أخرى.",
       });
+    } finally {
       setIsSubmitting(false);
     }
   };
