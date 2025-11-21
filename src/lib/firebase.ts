@@ -17,12 +17,20 @@ let db: Firestore;
 
 function initializeFirebase() {
     if (getApps().length === 0) {
+        if (!firebaseConfig.apiKey) {
+            console.error("Firebase API Key is missing. Make sure NEXT_PUBLIC_FIREBASE_API_KEY is set in your environment variables.");
+            // We don't initialize to prevent the app from crashing with a visible error.
+            // The error will be logged to the console.
+            return;
+        }
         app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
     } else {
         app = getApp();
+        auth = getAuth(app);
+        db = getFirestore(app);
     }
-    auth = getAuth(app);
-    db = getFirestore(app);
 }
 
 // This function can be called to ensure Firebase is initialized.
@@ -34,17 +42,25 @@ const ensureFirebaseInitialized = () => {
 };
 
 // Export getters that ensure initialization before returning instances.
-export const getFirebaseApp = (): FirebaseApp => {
+export const getFirebaseApp = (): FirebaseApp | null => {
     ensureFirebaseInitialized();
     return app;
 }
 
-export const getFirebaseAuth = (): Auth => {
+export const getFirebaseAuth = (): Auth | null => {
     ensureFirebaseInitialized();
+    if (!auth) {
+        // This can happen if initialization failed due to missing API key
+        return null;
+    }
     return auth;
 }
 
-export const getFirebaseDb = (): Firestore => {
+export const getFirebaseDb = (): Firestore | null => {
     ensureFirebaseInitialized();
+     if (!db) {
+        // This can happen if initialization failed due to missing API key
+        return null;
+    }
     return db;
 }

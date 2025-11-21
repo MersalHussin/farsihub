@@ -28,6 +28,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const fetchUserData = useCallback(async (firebaseUser: FirebaseUser) => {
     try {
       const db = getFirebaseDb();
+      if (!db) throw new Error("Firestore is not initialized.");
+
       const userDocRef = doc(db, 'users', firebaseUser.uid);
       const userDoc = await getDoc(userDocRef);
 
@@ -44,10 +46,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser(appUser);
         return appUser;
       } else {
-        // User exists in Auth, but not in Firestore. This is an inconsistent state.
-        // Log them out.
         const auth = getFirebaseAuth();
-        await auth.signOut();
+        if (auth) await auth.signOut();
         setUser(null);
         return null;
       }
@@ -60,6 +60,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const auth = getFirebaseAuth();
+    if (!auth) {
+      console.error("Firebase Auth is not initialized. Check your environment variables.");
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setLoading(true);
       if (firebaseUser) {
@@ -74,18 +79,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [fetchUserData]);
   
   useEffect(() => {
-    if (loading) return; // Don't do anything while loading
+    if (loading) return; 
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
 
     if (user) {
-      // User is logged in
       if (isAuthPage) {
-         // Redirect from auth pages to dashboard if logged in
          router.replace('/dashboard');
       }
     } else {
-      // User is not logged in
       const protectedPaths = ['/dashboard', '/admin', '/student', '/lectures', '/assignments', '/quizzes'];
       const isProtected = protectedPaths.some(path => pathname.startsWith(path));
       
@@ -98,30 +100,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     const auth = getFirebaseAuth();
-    await auth.signOut();
-    // onAuthStateChanged will handle setting user to null
-    // The useEffect above will handle redirection
+    if (auth) await auth.signOut();
   };
 
   const refreshUser = useCallback(async () => {
     const auth = getFirebaseAuth();
+    if (!auth) return;
     const currentUser = auth.currentUser;
     if (currentUser) {
         setLoading(true);
-        await currentUser.reload(); // Reloads user from Firebase Auth
-        await fetchUserData(currentUser); // Fetches user data from Firestore
+        await currentUser.reload(); 
+        await fetchUserData(currentUser); 
         setLoading(false);
     }
   },[fetchUserData]);
 
   const deleteAccount = async () => {
     const auth = getFirebaseAuth();
+    const db = getFirebaseDb();
+    if (!auth || !db) throw new Error("Firebase is not initialized.");
+
     const currentUser = auth.currentUser;
     if (!currentUser) {
         throw new Error("No user is currently signed in.");
     }
     try {
-        const db = getFirebaseDb();
         const userDocRef = doc(db, 'users', currentUser.uid);
         await deleteDoc(userDocRef);
         await deleteUser(currentUser);
@@ -133,13 +136,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const updateProfilePicture = async (photoURL: string) => {
     const auth = getFirebaseAuth();
+    const db = getFirebaseDb();
+    if (!auth || !db) throw new Error("Firebase is not initialized.");
+
     const currentUser = auth.currentUser;
     if (!currentUser) {
         throw new Error("No user is currently signed in.");
     }
     try {
         await updateProfile(currentUser, { photoURL });
-        const db = getFirebaseDb();
         const userDocRef = doc(db, 'users', currentUser.uid);
         await updateDoc(userDocRef, { photoURL });
         await refreshUser();

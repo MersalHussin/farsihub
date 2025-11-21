@@ -67,6 +67,8 @@ export default function SignUpPage() {
     try {
       const auth = getFirebaseAuth();
       const db = getFirebaseDb();
+      if (!auth || !db) throw new Error("Firebase is not initialized.");
+
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         values.email,

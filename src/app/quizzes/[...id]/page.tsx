@@ -48,7 +48,7 @@ export default function TakeQuizPage() {
   const idParams = params.id || [];
   const [subjectId, lectureId] = idParams;
 
-  const fetchLectureAndSubmission = useCallback(async () => {
+  const fetchLecture = useCallback(async () => {
     if (!user) {
         setLoading(false);
         router.push('/login');
@@ -64,6 +64,8 @@ export default function TakeQuizPage() {
     setLoading(true);
     try {
         const db = getFirebaseDb();
+        if (!db) throw new Error("Firestore is not initialized.");
+
         const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
         const lectureSnap = await getDoc(lectureRef);
 
@@ -72,20 +74,6 @@ export default function TakeQuizPage() {
             setLecture(lectureData);
             if (lectureData.quiz) {
                 setQuiz(lectureData.quiz);
-
-                // Check for previous submission
-                const submissionsRef = collection(db, "quizSubmissions");
-                const q = query(submissionsRef, 
-                    where("userId", "==", user.uid), 
-                    where("lectureId", "==", lectureId)
-                );
-                const querySnapshot = await getDocs(q);
-                if (!querySnapshot.empty) {
-                    const submission = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as QuizSubmission;
-                    setPreviousSubmission(submission);
-                    setScore(submission.score);
-                    setIsFinished(true); // Show result screen
-                }
             } else {
                 toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
                 router.push(`/lectures/${subjectId}/${lectureId}`);
@@ -103,8 +91,8 @@ export default function TakeQuizPage() {
   }, [subjectId, lectureId, user, toast, router]);
 
   useEffect(() => {
-    fetchLectureAndSubmission();
-  }, [fetchLectureAndSubmission]);
+    fetchLecture();
+  }, [fetchLecture]);
 
 
   const handleNextQuestion = () => {
@@ -159,6 +147,7 @@ export default function TakeQuizPage() {
 
     try {
         const db = getFirebaseDb();
+        if (!db) throw new Error("Firestore is not initialized.");
         await addDoc(collection(db, "quizSubmissions"), submissionData);
         toast({ title: "تم تقديم الاختبار بنجاح!" });
     } catch(error) {
@@ -169,29 +158,6 @@ export default function TakeQuizPage() {
     }
   };
   
-  const handleRetakeQuiz = async () => {
-      if (!previousSubmission) return;
-      
-      try {
-          const db = getFirebaseDb();
-          const submissionRef = doc(db, "quizSubmissions", previousSubmission.id);
-          await deleteDoc(submissionRef);
-          
-          // Reset state to start the quiz
-          setPreviousSubmission(null);
-          setIsFinished(false);
-          setCurrentQuestionIndex(0);
-          setAnswers({});
-          setSelectedAnswer(null);
-          setScore(0);
-          toast({ title: "جاهز للبدء من جديد!" });
-      } catch (error) {
-          console.error("Error deleting submission: ", error);
-          toast({ variant: "destructive", title: "فشل إعادة الاختبار." });
-      }
-  };
-
-
   const renderQuizContent = () => {
     if (loading) {
       return (
@@ -228,9 +194,9 @@ export default function TakeQuizPage() {
                     colors: ["#a864fd", "#29cdff", "#78ff44", "#ff718d", "#fdff6a"]
                  }}/>
                 <CardHeader>
-                    <CardTitle>{previousSubmission ? "نتيجتك السابقة" : "نتيجة الاختبار"}</CardTitle>
+                    <CardTitle>نتيجة الاختبار</CardTitle>
                     <CardDescription>
-                       {previousSubmission ? "هذه هي نتيجتك من محاولتك الأخيرة." : "لقد أكملت الاختبار بنجاح."}
+                       لقد أكملت الاختبار بنجاح.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -244,25 +210,6 @@ export default function TakeQuizPage() {
                         <ArrowRight className="ml-2 h-4 w-4" />
                         العودة إلى المحاضرة
                     </Button>
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="outline">إعادة الاختبار</Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    سيتم حذف نتيجتك الحالية وستبدأ الاختبار من جديد. لا يمكن التراجع عن هذا الإجراء.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleRetakeQuiz}>
-                                    نعم، أعد الاختبار
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
                 </CardFooter>
             </Card>
         )

@@ -52,6 +52,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       const auth = getFirebaseAuth();
+      if (!auth) throw new Error("Firebase Auth is not initialized.");
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
         title: "تم تسجيل الدخول بنجاح",
