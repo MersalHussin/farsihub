@@ -31,7 +31,17 @@ export function Footer() {
       </div>
       <div className="border-t">
         <div className="container mx-auto py-4 px-4 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} فارسي هب. جميع الحقوق محفوظة.</p>
+            <p>
+                صُنع بكل حب بواسطة{' '}
+                <a 
+                    href="https://mersal.top/" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="font-bold text-primary hover:underline"
+                >
+                    مرسال
+                </a>
+            </p>
         </div>
       </div>
     </footer>
