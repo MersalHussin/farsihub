@@ -47,6 +47,7 @@ const formSchema = z.object({
   title: z.string().min(3, { message: "يجب أن يتكون العنوان من 3 أحرف على الأقل." }),
   description: z.string().min(10, { message: "يجب أن يتكون الوصف من 10 أحرف على الأقل." }),
   pdfUrl: z.string().url({ message: "الرجاء إدخال رابط صالح." }),
+  youtubeVideoUrl: z.string().url({ message: "الرجاء إدخال رابط يوتيوب صالح." }).optional().or(z.literal('')),
   hasQuiz: z.boolean().default(false),
   quiz: z.object({
       title: z.string(),
@@ -79,6 +80,7 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
       title: "",
       description: "",
       pdfUrl: "",
+      youtubeVideoUrl: "",
       hasQuiz: false,
       quiz: {
         title: "",
@@ -98,6 +100,7 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
     setIsLoading(true);
     try {
       const db = getFirebaseDb();
+      if (!db) throw new Error("Firestore is not initialized.");
       const lecturesCollectionRef = collection(db, "subjects", subject.id, "lectures");
       const newLectureDocRef = doc(lecturesCollectionRef);
 
@@ -106,6 +109,7 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
         title: values.title,
         description: values.description,
         pdfUrl: values.pdfUrl,
+        youtubeVideoUrl: values.youtubeVideoUrl || null,
         subjectId: subject.id,
         subjectName: subject.name,
         year: subject.year,
@@ -158,7 +162,7 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
         <DialogHeader>
           <DialogTitle>إضافة محاضرة جديدة لمادة: {subject.name}</DialogTitle>
           <DialogDescription>
-            أدخل تفاصيل المحاضرة وأضف اختباراً إذا رغبت.
+            أدخل تفاصيل المحاضرة وأضف اختباراً أو ملخص فيديو إذا رغبت.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -200,6 +204,20 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
                         <FormLabel>رابط PDF</FormLabel>
                         <FormControl>
                             <Input dir='ltr' placeholder="https://..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                    
+                    <FormField
+                    control={form.control}
+                    name="youtubeVideoUrl"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>رابط فيديو يوتيوب (اختياري)</FormLabel>
+                        <FormControl>
+                            <Input dir='ltr' placeholder="https://www.youtube.com/watch?v=..." {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -300,7 +318,7 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
                                                                 <FormItem className="flex items-center space-x-3 space-y-0">
                                                                     <FormControl>
                                                                     <div className="flex items-center gap-2 w-full">
-                                                                        <RadioGroupItem value={field.value} disabled={!field.value} />
+                                                                        <RadioGroupItem value={field.value ?? ''} disabled={!field.value} />
                                                                         <Input {...field} placeholder={`خيار ${optionIndex + 1}`} />
                                                                     </div>
                                                                     </FormControl>

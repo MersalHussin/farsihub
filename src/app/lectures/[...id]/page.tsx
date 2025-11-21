@@ -12,6 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
+import { VideoPlayerDialog } from "./video-player-dialog";
 
 export default function LectureDetailsPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -23,10 +24,15 @@ export default function LectureDetailsPage() {
   const [subjectId, lectureId] = idParams;
 
   const fetchLecture = useCallback(async () => {
-    if (typeof subjectId !== 'string' || typeof lectureId !== 'string') return;
+    if (typeof subjectId !== 'string' || typeof lectureId !== 'string') {
+        router.push('/lectures'); // Redirect if params are invalid
+        return;
+    }
     setLoading(true);
     try {
       const db = getFirebaseDb();
+      if (!db) throw new Error("Firestore is not initialized.");
+
       const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
       const lectureSnap = await getDoc(lectureRef);
 
@@ -90,7 +96,10 @@ export default function LectureDetailsPage() {
                   ></iframe>
               </div>
               
-              <div className="text-center">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                {lecture.youtubeVideoUrl && (
+                  <VideoPlayerDialog youtubeUrl={lecture.youtubeVideoUrl} />
+                )}
                 {lecture.quiz ? (
                   <Button size="lg" asChild>
                     <Link href={`/quizzes/${lecture.subjectId}/${lecture.id}`}>

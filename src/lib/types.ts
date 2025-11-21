@@ -42,6 +42,7 @@ export type Lecture = {
   semester: Semester;
   createdAt: Timestamp;
   quiz?: Quiz;
+  youtubeVideoUrl?: string;
 };
 
 export type Student = {

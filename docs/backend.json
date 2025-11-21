@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "user": {
@@ -38,6 +39,7 @@
         "title": { "type": "string" },
         "description": { "type": "string" },
         "pdfUrl": { "type": "string", "format": "uri" },
+        "youtubeVideoUrl": { "type": "string", "format": "uri" },
         "subjectId": { "type": "string" },
         "subjectName": { "type": "string" },
         "year": { "type": "string", "enum": ["first", "second", "third", "fourth"] },
@@ -123,15 +125,6 @@
             "queryScope": "COLLECTION",
             "fields": [
                 {"fieldPath": "userId", "order": "ASCENDING"},
-                {"fieldPath": "submittedAt", "order": "DESCENDING"}
-            ]
-        },
-        {
-            "collectionGroup": "quizSubmissions",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {"fieldPath": "userId", "order": "ASCENDING"},
-                {"fieldPath": "lectureId", "order": "ASCENDING"},
                 {"fieldPath": "submittedAt", "order": "DESCENDING"}
             ]
         }

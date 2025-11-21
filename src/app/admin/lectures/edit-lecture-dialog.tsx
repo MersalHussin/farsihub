@@ -47,6 +47,7 @@ const formSchema = z.object({
   title: z.string().min(3, { message: "يجب أن يتكون العنوان من 3 أحرف على الأقل." }),
   description: z.string().min(10, { message: "يجب أن يتكون الوصف من 10 أحرف على الأقل." }),
   pdfUrl: z.string().url({ message: "الرجاء إدخال رابط صالح." }),
+  youtubeVideoUrl: z.string().url({ message: "الرجاء إدخال رابط يوتيوب صالح." }).optional().or(z.literal('')),
   hasQuiz: z.boolean().default(false),
   quiz: z.object({
       title: z.string(),
@@ -80,6 +81,7 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
       title: lecture.title,
       description: lecture.description,
       pdfUrl: lecture.pdfUrl,
+      youtubeVideoUrl: lecture.youtubeVideoUrl || '',
       hasQuiz: !!lecture.quiz,
       quiz: lecture.quiz || { title: "", questions: [] },
     },
@@ -96,12 +98,14 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
     setIsLoading(true);
     try {
       const db = getFirebaseDb();
+      if (!db) throw new Error("Firestore is not initialized.");
       const lectureDocRef = doc(db, "subjects", subject.id, "lectures", lecture.id);
       
       const lectureData: any = {
         title: values.title,
         description: values.description,
         pdfUrl: values.pdfUrl,
+        youtubeVideoUrl: values.youtubeVideoUrl || deleteField(),
         quiz: values.hasQuiz && values.quiz ? values.quiz : deleteField(),
       };
       
@@ -186,6 +190,20 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
                         <FormLabel>رابط PDF</FormLabel>
                         <FormControl>
                             <Input dir='ltr' placeholder="https://..." {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+
+                    <FormField
+                    control={form.control}
+                    name="youtubeVideoUrl"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>رابط فيديو يوتيوب (اختياري)</FormLabel>
+                        <FormControl>
+                            <Input dir='ltr' placeholder="https://www.youtube.com/watch?v=..." {...field} />
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -286,7 +304,7 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
                                                                 <FormItem className="flex items-center space-x-3 space-y-0">
                                                                     <FormControl>
                                                                     <div className="flex items-center gap-2 w-full">
-                                                                        <RadioGroupItem value={field.value} disabled={!field.value} />
+                                                                        <RadioGroupItem value={field.value ?? ''} disabled={!field.value} />
                                                                         <Input {...field} placeholder={`خيار ${optionIndex + 1}`} />
                                                                     </div>
                                                                     </FormControl>
