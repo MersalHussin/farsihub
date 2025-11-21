@@ -20,7 +20,7 @@ export default function DashboardPage() {
     }
 
     if (user.role === 'admin') {
-      router.replace('/admin');
+      router.replace('/admin/profile');
     } else if (user.role === 'student') {
       if (!user.year) {
         router.replace('/student/onboarding');
