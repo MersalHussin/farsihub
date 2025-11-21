@@ -6,6 +6,20 @@ import { Toaster } from '@/components/ui/toaster';
 export const metadata: Metadata = {
   title: 'Farsi Hub | فارسي هب',
   description: 'منصة تعليمية لطلاب قسم اللغة الفارسية - جامعة القاهرة',
+  openGraph: {
+    title: 'Farsi Hub | فارسي هب',
+    description: 'منصة تعليمية لطلاب قسم اللغة الفارسية - جامعة القاهرة',
+    images: [
+      {
+        url: 'https://i.suar.me/evQjQ/l',
+        width: 1200,
+        height: 630,
+        alt: 'Farsi Hub Logo',
+      },
+    ],
+    locale: 'ar_EG',
+    type: 'website',
+  },
   icons: {
     icon: 'https://i.suar.me/lpqVn/l',
     shortcut: 'https://i.suar.me/lpqVn/l',

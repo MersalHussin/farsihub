@@ -26,12 +26,22 @@ export function Footer() {
         <div className="text-center md:text-left">
            <h3 className="font-semibold text-foreground mb-4">تواصل معنا</h3>
            <p>لديك أسئلة أو اقتراحات؟</p>
-           <p>info@farsihub.com</p>
+           <p>farsihub@mersal.top</p>
         </div>
       </div>
       <div className="border-t">
         <div className="container mx-auto py-4 px-4 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} فارسي هب. جميع الحقوق محفوظة.</p>
+            <p>
+                صُنع بكل حب بواسطة{' '}
+                <a 
+                    href="https://mersal.top/" 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="font-bold text-primary hover:underline"
+                >
+                    مرسال
+                </a>
+            </p>
         </div>
       </div>
     </footer>
