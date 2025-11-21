@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { BookHeart } from 'lucide-react';
+import Image from 'next/image';
 
 export function Footer() {
   return (
@@ -8,7 +8,7 @@ export function Footer() {
       <div className="container mx-auto py-8 px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-muted-foreground">
         <div className="flex flex-col items-center md:items-start">
             <Link href="/" className="flex items-center gap-2 font-bold text-xl mb-4 text-foreground">
-              <BookHeart className="h-7 w-7 text-primary" />
+              <Image src="https://i.suar.me/lpqVn/l" alt="Farsi Hub Logo" width={28} height={28} className="h-7 w-7" />
               <span>فارسي هب</span>
             </Link>
             <div className="text-center md:text-right max-w-xs">

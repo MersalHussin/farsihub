@@ -4,12 +4,13 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, BookHeart, LayoutDashboard, AlertTriangle, User } from 'lucide-react';
+import { Menu, LayoutDashboard, AlertTriangle, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import Image from 'next/image';
 
 function PendingApprovalBanner() {
     return (
@@ -32,6 +33,13 @@ export function Header() {
     { href: '/lectures', label: 'المحاضرات' },
     { href: '/assignments', label: 'التكليفات' },
   ];
+
+  const Logo = () => (
+    <Link href="/" className="flex items-center gap-2 font-bold text-xl">
+        <Image src="https://i.suar.me/lpqVn/l" alt="Farsi Hub Logo" width={28} height={28} className="h-7 w-7" />
+        <span>فارسي هب</span>
+    </Link>
+  );
 
   const NavLinks = ({ isMobile = false }) => (
     <nav className={cn("flex items-center gap-2", isMobile ? "flex-col" : "flex-row")}>
@@ -140,10 +148,7 @@ export function Header() {
         <div className="container mx-auto flex h-16 items-center px-4">
             {isMobile ? (
                 <>
-                    <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-                        <BookHeart className="h-7 w-7 text-primary" />
-                        <span>فارسي هب</span>
-                    </Link>
+                    <Logo />
                     <div className="mr-auto">
                         <Sheet>
                             <SheetTrigger asChild>
@@ -164,10 +169,7 @@ export function Header() {
             ) : (
             <div className='flex items-center justify-between w-full'>
                 <div className='flex-1'>
-                    <Link href="/" className="flex items-center gap-2 font-bold text-xl">
-                        <BookHeart className="h-7 w-7 text-primary" />
-                        <span>فارسي هب</span>
-                    </Link>
+                    <Logo />
                 </div>
 
                 <div className='flex-1 flex justify-center'>

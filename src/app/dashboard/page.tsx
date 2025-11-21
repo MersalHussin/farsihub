@@ -25,7 +25,7 @@ export default function DashboardPage() {
       if (!user.year) {
         router.replace('/student/onboarding');
       } else {
-        router.replace('/student');
+        router.replace('/student/profile');
       }
     }
     
