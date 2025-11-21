@@ -26,7 +26,7 @@ export function Footer() {
         <div className="text-center md:text-left">
            <h3 className="font-semibold text-foreground mb-4">تواصل معنا</h3>
            <p>لديك أسئلة أو اقتراحات؟</p>
-           <p>info@farsihub.com</p>
+           <p>Mersalhussin@gmail.com</p>
         </div>
       </div>
       <div className="border-t">
