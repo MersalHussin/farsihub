@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,17 +36,9 @@ const formSchema = z.object({
 });
 
 export default function LoginPage() {
-  const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { user, loading } = useAuth();
-
-  useEffect(() => {
-    if (!loading && user) {
-      router.replace("/");
-    }
-  }, [user, loading, router]);
-
+  const { loading, user } = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,12 +51,13 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
+      const auth = getFirebaseAuth();
       await signInWithEmailAndPassword(auth, values.email, values.password);
       toast({
         title: "تم تسجيل الدخول بنجاح",
         description: "سيتم توجيهك الآن...",
       });
-      router.push("/");
+      // The AuthProvider will handle the redirection.
     } catch (error: any) {
       console.error(error);
       let errorMessage = "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى.";
@@ -80,14 +73,16 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   }
-
+  
   if (loading || user) {
-    return (
+     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin" />
+        <p className="ml-4">جارِ التحقق من جلسة الدخول...</p>
       </div>
     );
   }
+
 
   return (
     <Card className="w-full max-w-md">

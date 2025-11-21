@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseDb } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { Lecture } from "@/lib/types";
@@ -26,6 +26,7 @@ export default function LectureDetailsPage() {
     if (typeof subjectId !== 'string' || typeof lectureId !== 'string') return;
     setLoading(true);
     try {
+      const db = getFirebaseDb();
       const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
       const lectureSnap = await getDoc(lectureRef);
 

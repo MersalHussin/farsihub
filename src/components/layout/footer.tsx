@@ -11,9 +11,9 @@ export function Footer() {
               <BookHeart className="h-7 w-7 text-primary" />
               <span>فارسي هب</span>
             </Link>
-            <p className="text-center md:text-right max-w-xs">
+            <div className="text-center md:text-right max-w-xs">
               منصة تعليمية متكاملة لطلاب اللغة الفارسية في جامعة القاهرة، تهدف إلى تسهيل رحلتهم التعليمية.
-            </p>
+            </div>
         </div>
         <div className="text-center">
             <h3 className="font-semibold text-foreground mb-4">روابط سريعة</h3>

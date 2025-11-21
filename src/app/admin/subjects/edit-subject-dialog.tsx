@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseDb } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -78,6 +78,7 @@ export default function EditSubjectDialog({ subject, onSubjectUpdated }: EditSub
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     
+    const db = getFirebaseDb();
     const subjectRef = doc(db, "subjects", subject.id);
     updateDoc(subjectRef, values)
         .then(() => {

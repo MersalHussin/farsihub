@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { collection, getDocs, query, orderBy, where } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseDb } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { Lecture, Subject, LectureYear } from "@/lib/types";
+import type { Lecture, Subject, LectureYear, Semester } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -14,12 +14,14 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Loader2, BookOpen } from "lucide-react";
+import { Loader2, BookOpen, FileText, FileQuestion } from "lucide-react";
 import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 
 const yearMap: Record<LectureYear, string> = {
   first: "الفرقة الأولى",
@@ -43,6 +45,7 @@ export default function LecturesPage() {
     }
     setLoading(true);
     try {
+      const db = getFirebaseDb();
       // Fetch Subjects for the user's year
       const subjectsQuery = query(
         collection(db, "subjects"),
@@ -90,6 +93,15 @@ export default function LecturesPage() {
     }
     return subjects.filter(subject => subject.semester === semesterFilter);
   }, [subjects, semesterFilter]);
+  
+  const semesterCounts = useMemo(() => {
+    return subjects.reduce((acc, subject) => {
+        if (subject.semester) {
+            acc[subject.semester] = (acc[subject.semester] || 0) + 1;
+        }
+        return acc;
+    }, {} as Record<Semester, number>);
+  }, [subjects]);
 
   const getLecturesForSubject = (subjectId: string) => {
     return lecturesBySubject[subjectId] || [];
@@ -134,30 +146,31 @@ export default function LecturesPage() {
          );
     }
 
-    if (filteredSubjects.length === 0) {
+    if (subjects.length === 0) {
       return (
         <div className="text-center text-muted-foreground py-12 border rounded-lg">
           <p>
-            {semesterFilter !== "all"
-              ? "لا توجد مواد دراسية متاحة لهذا الفصل الدراسي حالياً."
-              : "لا توجد مواد دراسية متاحة لفرقتك الدراسية حالياً."
-            }
+            لا توجد مواد دراسية متاحة لفرقتك الدراسية حالياً.
           </p>
         </div>
       );
     }
     
     return (
-        <>
-            <Tabs dir="rtl" value={semesterFilter} onValueChange={(value) => setSemesterFilter(value as any)} className="w-full">
-            <TabsList className="grid w-full grid-cols-3 max-w-sm">
-                <TabsTrigger value="all">الكل</TabsTrigger>
-                <TabsTrigger value="first">الفصل الأول</TabsTrigger>
-                <TabsTrigger value="second">الفصل الثاني</TabsTrigger>
-            </TabsList>
-            </Tabs>
+        <TooltipProvider>
+            <div className="flex justify-center mb-6">
+                <Tabs dir="rtl" value={semesterFilter} onValueChange={(value) => setSemesterFilter(value as any)}>
+                <TabsList className="grid w-full grid-cols-3 max-w-sm">
+                    <TabsTrigger value="all">الكل</TabsTrigger>
+                    <TabsTrigger value="first">الفصل الأول</TabsTrigger>
+                    <TabsTrigger value="second" disabled={!semesterCounts.second || semesterCounts.second === 0}>
+                        الفصل الثاني
+                    </TabsTrigger>
+                </TabsList>
+                </Tabs>
+            </div>
             <Accordion type="multiple" defaultValue={filteredSubjects.map(s => s.id)} className="w-full space-y-4">
-                {filteredSubjects.map((subject) => {
+                {filteredSubjects.length > 0 ? filteredSubjects.map((subject) => {
                     const subjectLectures = getLecturesForSubject(subject.id);
                     return (
                         <AccordionItem value={subject.id} key={subject.id} className="border rounded-lg bg-card">
@@ -173,7 +186,25 @@ export default function LecturesPage() {
                                     {subjectLectures.map((lecture) => (
                                          <Card key={lecture.id} className="flex flex-col">
                                             <CardHeader>
-                                                <CardTitle>{lecture.title}</CardTitle>
+                                                <div className="flex justify-between items-start">
+                                                    <CardTitle className="flex items-start gap-2">
+                                                        <FileText className="h-6 w-6 text-primary/80 shrink-0 mt-1" />
+                                                        <span>{lecture.title}</span>
+                                                    </CardTitle>
+                                                     {lecture.quiz && (
+                                                        <Tooltip>
+                                                            <TooltipTrigger>
+                                                                <Badge variant="outline" className="flex items-center gap-1.5">
+                                                                    <FileQuestion className="h-3.5 w-3.5"/>
+                                                                    <span>{lecture.quiz.questions.length}</span>
+                                                                </Badge>
+                                                            </TooltipTrigger>
+                                                            <TooltipContent>
+                                                                <p>يحتوي على اختبار من {lecture.quiz.questions.length} أسئلة.</p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    )}
+                                                </div>
                                             </CardHeader>
                                             <CardContent className="flex-grow">
                                                 <p className="text-muted-foreground line-clamp-3 h-14">{lecture.description}</p>
@@ -195,9 +226,13 @@ export default function LecturesPage() {
                             </AccordionContent>
                         </AccordionItem>
                     )
-                })}
+                }) : (
+                     <div className="text-center text-muted-foreground py-12 border rounded-lg">
+                        <p>لا توجد مواد دراسية متاحة لهذا الفصل الدراسي حالياً.</p>
+                    </div>
+                )}
             </Accordion>
-        </>
+        </TooltipProvider>
     );
   };
 

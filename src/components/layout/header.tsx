@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/use-auth';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { Menu, BookHeart, LayoutDashboard, AlertTriangle } from 'lucide-react';
+import { Menu, BookHeart, LayoutDashboard, AlertTriangle, User } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -73,10 +73,14 @@ export function Header() {
     }
 
     if (user) {
+      const profileUrl = user.role === 'admin' ? '/admin' : '/student/profile';
+      const profileLabel = user.role === 'admin' ? 'لوحة التحكم' : 'الملف الشخصي';
+      const profileIcon = user.role === 'admin' ? <LayoutDashboard className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />;
+      
       return isMobile ? (
         <div className="flex flex-col w-full mt-4 pt-4 border-t">
            <Button variant='outline' asChild className='w-full'>
-            <Link href="/dashboard">حسابي</Link>
+            <Link href={profileUrl}>{profileLabel}</Link>
           </Button>
           <Button onClick={logout} variant="default" className='w-full mt-2'>
             تسجيل الخروج
@@ -103,9 +107,9 @@ export function Header() {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                    <Link href="/dashboard">
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>لوحة التحكم</span>
+                    <Link href={profileUrl}>
+                        {profileIcon}
+                        <span>{profileLabel}</span>
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />

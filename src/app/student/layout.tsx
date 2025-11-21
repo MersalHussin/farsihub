@@ -5,16 +5,15 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/use-auth';
 import Link from 'next/link';
-import { Home, User, FileQuestion, Loader2, AlertTriangle } from 'lucide-react';
+import { User, Trophy, Loader2, AlertTriangle } from 'lucide-react';
 import { Header } from '@/components/layout/header';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 
 const navItems = [
-  { href: '/student', label: 'لوحة التحكم', icon: Home },
-  { href: '/student/quizzes', label: 'نتائج الاختبارات', icon: FileQuestion },
   { href: '/student/profile', label: 'الملف الشخصي', icon: User },
+  { href: '/student/achievements', label: 'الإنجازات', icon: Trophy },
 ];
 
 

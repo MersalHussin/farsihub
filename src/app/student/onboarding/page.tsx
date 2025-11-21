@@ -1,10 +1,11 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseDb } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, BookHeart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { type LectureYear } from "@/lib/types";
+import Image from 'next/image';
+import { cn } from "@/lib/utils";
 
 const yearMap: Record<LectureYear, string> = {
   first: "الفرقة الأولى",
@@ -20,11 +23,16 @@ const yearMap: Record<LectureYear, string> = {
   fourth: "الفرقة الرابعة",
 };
 
+const boyAvatarUrl = 'https://i.suar.me/81XmV/l';
+const girlAvatarUrl = 'https://i.suar.me/j5Q7x/l';
+
+
 export default function OnboardingPage() {
   const { user, loading, logout, refreshUser } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
   const [selectedYear, setSelectedYear] = useState<LectureYear | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Redirect if user is not a student or has already selected a year
@@ -41,17 +49,22 @@ export default function OnboardingPage() {
 
 
   const handleSave = async () => {
-    if (!user || !selectedYear) {
+    if (!user || !selectedYear || !selectedAvatar) {
         toast({
             variant: "destructive",
-            title: "الرجاء اختيار فرقتك الدراسية.",
+            title: "الرجاء إكمال جميع الخيارات.",
+            description: "يجب اختيار الفرقة الدراسية والصورة الرمزية."
         });
       return;
     }
     setIsSubmitting(true);
     try {
+      const db = getFirebaseDb();
       const userRef = doc(db, "users", user.uid);
-      await updateDoc(userRef, { year: selectedYear });
+      await updateDoc(userRef, { 
+        year: selectedYear,
+        photoURL: selectedAvatar,
+      });
       
       // Manually refresh user context to get the new 'year'
       await refreshUser();
@@ -94,28 +107,69 @@ export default function OnboardingPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">خطوة أخيرة يا {user.name}!</CardTitle>
           <CardDescription>
-            لتخصيص تجربتك التعليمية، يرجى تحديد فرقتك الدراسية الحالية.
+            لتخصيص تجربتك التعليمية، يرجى تحديد فرقتك الدراسية وصورتك الرمزية.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6 pt-2">
-          <RadioGroup 
-            onValueChange={(value) => setSelectedYear(value as LectureYear)}
-            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
-          >
-            {Object.keys(yearMap).map((yearKey) => (
-              <Label 
-                key={yearKey} 
-                htmlFor={yearKey}
-                className="flex items-center justify-center text-lg space-x-3 space-x-reverse rounded-lg border-2 p-4 cursor-pointer transition-all hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:text-primary"
-              >
-                <RadioGroupItem value={yearKey} id={yearKey} className="h-5 w-5" />
-                <span className="font-bold">{yearMap[yearKey as LectureYear]}</span>
-              </Label>
-            ))}
-          </RadioGroup>
+        <CardContent className="space-y-8 pt-2">
+          <div>
+            <Label className="text-lg font-semibold mb-3 block text-center">اختر فرقتك الدراسية</Label>
+            <RadioGroup 
+              onValueChange={(value) => setSelectedYear(value as LectureYear)}
+              className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+            >
+              {Object.keys(yearMap).map((yearKey) => (
+                <Label 
+                  key={yearKey} 
+                  htmlFor={yearKey}
+                  className="flex items-center justify-center text-lg space-x-3 space-x-reverse rounded-lg border-2 p-4 cursor-pointer transition-all hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:text-primary"
+                >
+                  <RadioGroupItem value={yearKey} id={yearKey} className="h-5 w-5" />
+                  <span className="font-bold">{yearMap[yearKey as LectureYear]}</span>
+                </Label>
+              ))}
+            </RadioGroup>
+          </div>
+
+          <div>
+             <Label className="text-lg font-semibold mb-3 block text-center">اختر صورتك الرمزية</Label>
+             <RadioGroup
+                value={selectedAvatar ?? undefined}
+                onValueChange={setSelectedAvatar}
+                className="flex flex-col sm:flex-row gap-4"
+            >
+                <Label htmlFor="boy-avatar" className="flex-1 flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-all hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:text-primary">
+                    <RadioGroupItem value={boyAvatarUrl} id="boy-avatar" className="sr-only" />
+                    <Image 
+                      src={boyAvatarUrl} 
+                      alt="صورة ولد" 
+                      width={80} 
+                      height={80} 
+                      className={cn(
+                        "rounded-full transition-all",
+                         selectedAvatar === boyAvatarUrl && 'ring-2 ring-offset-2 ring-primary'
+                      )}
+                    />
+                    <span>ولد</span>
+                </Label>
+                <Label htmlFor="girl-avatar" className="flex-1 flex flex-col items-center gap-2 rounded-lg border-2 p-4 cursor-pointer transition-all hover:border-primary has-[:checked]:border-primary has-[:checked]:bg-primary/5 has-[:checked]:text-primary">
+                    <RadioGroupItem value={girlAvatarUrl} id="girl-avatar" className="sr-only" />
+                    <Image 
+                      src={girlAvatarUrl} 
+                      alt="صورة بنت" 
+                      width={80} 
+                      height={80} 
+                      className={cn(
+                        "rounded-full transition-all",
+                         selectedAvatar === girlAvatarUrl && 'ring-2 ring-offset-2 ring-primary'
+                      )}
+                    />
+                    <span>بنت</span>
+                </Label>
+            </RadioGroup>
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4">
-             <Button onClick={handleSave} className="w-full" size="lg" disabled={isSubmitting || !selectedYear}>
+             <Button onClick={handleSave} className="w-full" size="lg" disabled={isSubmitting || !selectedYear || !selectedAvatar}>
                 {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                 حفظ والمتابعة
             </Button>

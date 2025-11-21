@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, getDocs, deleteDoc, writeBatch } from "firebase/firestore";
+import { getFirebaseDb } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
-import type { Lecture, Quiz } from "@/lib/types";
+import type { Lecture, Quiz, QuizSubmission } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -15,9 +15,17 @@ import { Loader2, ArrowRight } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Confetti from 'react-dom-confetti';
-import { errorEmitter } from "@/lib/error-emitter";
-import { FirestorePermissionError } from "@/lib/errors";
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function TakeQuizPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -29,6 +37,9 @@ export default function TakeQuizPage() {
   const [isFinished, setIsFinished] = useState(false);
   const [score, setScore] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [previousSubmission, setPreviousSubmission] = useState<QuizSubmission | null>(null);
+
 
   const { toast } = useToast();
   const router = useRouter();
@@ -37,37 +48,64 @@ export default function TakeQuizPage() {
   const idParams = params.id || [];
   const [subjectId, lectureId] = idParams;
 
-  const fetchLectureWithQuiz = useCallback(async () => {
-    if (typeof subjectId !== 'string' || typeof lectureId !== 'string') return;
+  const fetchLectureAndSubmission = useCallback(async () => {
+    if (!user) {
+        setLoading(false);
+        router.push('/login');
+        return;
+    }
+    if (typeof subjectId !== 'string' || typeof lectureId !== 'string') {
+        setLoading(false);
+        toast({ variant: "destructive", title: "رابط غير صالح" });
+        router.push('/lectures');
+        return;
+    };
+
     setLoading(true);
     try {
-      const docRef = doc(db, "subjects", subjectId, "lectures", lectureId);
-      const docSnap = await getDoc(docRef);
+        const db = getFirebaseDb();
+        const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
+        const lectureSnap = await getDoc(lectureRef);
 
-      if (docSnap.exists()) {
-        const lectureData = { id: docSnap.id, ...docSnap.data() } as Lecture;
-        setLecture(lectureData);
-        if (lectureData.quiz) {
-          setQuiz(lectureData.quiz);
+        if (lectureSnap.exists()) {
+            const lectureData = { id: lectureSnap.id, ...lectureSnap.data() } as Lecture;
+            setLecture(lectureData);
+            if (lectureData.quiz) {
+                setQuiz(lectureData.quiz);
+
+                // Check for previous submission
+                const submissionsRef = collection(db, "quizSubmissions");
+                const q = query(submissionsRef, 
+                    where("userId", "==", user.uid), 
+                    where("lectureId", "==", lectureId)
+                );
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    const submission = { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } as QuizSubmission;
+                    setPreviousSubmission(submission);
+                    setScore(submission.score);
+                    setIsFinished(true); // Show result screen
+                }
+            } else {
+                toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
+                router.push(`/lectures/${subjectId}/${lectureId}`);
+            }
         } else {
-          toast({ variant: "destructive", title: "الاختبار غير موجود لهذه المحاضرة" });
-          router.push(`/lectures/${subjectId}/${lectureId}`);
+            toast({ variant: "destructive", title: "المحاضرة غير موجودة" });
+            router.push('/lectures');
         }
-      } else {
-        toast({ variant: "destructive", title: "المحاضرة غير موجودة" });
-        router.push('/lectures');
-      }
     } catch (error) {
-      console.error("Error fetching lecture/quiz: ", error);
-      toast({ variant: "destructive", title: "فشل تحميل الاختبار" });
+        console.error("Error fetching data: ", error);
+        toast({ variant: "destructive", title: "فشل تحميل البيانات" });
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  }, [subjectId, lectureId, toast, router]);
+  }, [subjectId, lectureId, user, toast, router]);
 
   useEffect(() => {
-    fetchLectureWithQuiz();
-  }, [fetchLectureWithQuiz]);
+    fetchLectureAndSubmission();
+  }, [fetchLectureAndSubmission]);
+
 
   const handleNextQuestion = () => {
     if (selectedAnswer === null) {
@@ -92,6 +130,7 @@ export default function TakeQuizPage() {
   
   const finishQuiz = async (finalAnswers: Record<number, string>) => {
     if(!quiz || !user || !lecture || !subjectId || !lectureId) return;
+    setIsSubmitting(true);
     let correctCount = 0;
     quiz.questions.forEach((question, index) => {
         if(finalAnswers[index] === question.correctAnswer) {
@@ -118,23 +157,38 @@ export default function TakeQuizPage() {
         submittedAt: serverTimestamp(),
     };
 
-    addDoc(collection(db, "quizSubmissions"), submissionData)
-        .then(() => {
-            toast({ title: "تم تقديم الاختبار بنجاح!" });
-        })
-        .catch(async (error) => {
-            const permissionError = new FirestorePermissionError({
-                path: 'quizSubmissions',
-                operation: 'create',
-                requestResourceData: submissionData,
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            toast({ 
-                variant: "destructive", 
-                title: "فشل تقديم الاختبار",
-                description: "ليس لديك الصلاحية لتقديم هذا الاختبار."
-            });
-        });
+    try {
+        const db = getFirebaseDb();
+        await addDoc(collection(db, "quizSubmissions"), submissionData);
+        toast({ title: "تم تقديم الاختبار بنجاح!" });
+    } catch(error) {
+        console.error("Error creating submission: ", error);
+        toast({ variant: "destructive", title: "فشل حفظ نتيجتك." });
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+  
+  const handleRetakeQuiz = async () => {
+      if (!previousSubmission) return;
+      
+      try {
+          const db = getFirebaseDb();
+          const submissionRef = doc(db, "quizSubmissions", previousSubmission.id);
+          await deleteDoc(submissionRef);
+          
+          // Reset state to start the quiz
+          setPreviousSubmission(null);
+          setIsFinished(false);
+          setCurrentQuestionIndex(0);
+          setAnswers({});
+          setSelectedAnswer(null);
+          setScore(0);
+          toast({ title: "جاهز للبدء من جديد!" });
+      } catch (error) {
+          console.error("Error deleting submission: ", error);
+          toast({ variant: "destructive", title: "فشل إعادة الاختبار." });
+      }
   };
 
 
@@ -148,9 +202,15 @@ export default function TakeQuizPage() {
     }
 
     if (!quiz || !lecture) {
-      return <p className="text-center">لم يتم العثور على الاختبار.</p>;
+      return <div className="text-center py-24">
+          <h2 className="text-2xl font-bold">لم يتم العثور على الاختبار</h2>
+          <p className="text-muted-foreground">قد تكون المحاضرة أو الاختبار الذي تبحث عنه قد حُذف.</p>
+          <Button variant="outline" onClick={() => router.push('/lectures')} className="mt-4">
+                العودة للمحاضرات
+            </Button>
+        </div>;
     }
-
+    
     if(isFinished) {
         return (
             <Card className="w-full max-w-2xl mx-auto text-center">
@@ -168,8 +228,10 @@ export default function TakeQuizPage() {
                     colors: ["#a864fd", "#29cdff", "#78ff44", "#ff718d", "#fdff6a"]
                  }}/>
                 <CardHeader>
-                    <CardTitle>لقد أكملت الاختبار!</CardTitle>
-                    <CardDescription>هذه هي نتيجتك.</CardDescription>
+                    <CardTitle>{previousSubmission ? "نتيجتك السابقة" : "نتيجة الاختبار"}</CardTitle>
+                    <CardDescription>
+                       {previousSubmission ? "هذه هي نتيجتك من محاولتك الأخيرة." : "لقد أكملت الاختبار بنجاح."}
+                    </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <p className="text-5xl font-bold">{Math.round(score)}%</p>
@@ -177,11 +239,30 @@ export default function TakeQuizPage() {
                        أجبت بشكل صحيح على {Math.round(score/100 * quiz.questions.length)} من {quiz.questions.length} أسئلة.
                     </p>
                 </CardContent>
-                <CardFooter className="flex justify-center">
+                <CardFooter className="flex flex-col sm:flex-row justify-center gap-4">
                     <Button onClick={() => router.push(`/lectures/${lecture.subjectId}/${lecture.id}`)}>
                         <ArrowRight className="ml-2 h-4 w-4" />
                         العودة إلى المحاضرة
                     </Button>
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="outline">إعادة الاختبار</Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>هل أنت متأكد؟</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    سيتم حذف نتيجتك الحالية وستبدأ الاختبار من جديد. لا يمكن التراجع عن هذا الإجراء.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleRetakeQuiz}>
+                                    نعم، أعد الاختبار
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </CardFooter>
             </Card>
         )
@@ -198,22 +279,21 @@ export default function TakeQuizPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <p className="text-lg font-semibold">{question.text}</p>
-          <RadioGroup value={selectedAnswer ?? undefined} onValueChange={setSelectedAnswer}>
+          <p className="text-lg font-semibold text-right">{question.text}</p>
+          <RadioGroup dir="rtl" value={selectedAnswer ?? ''} onValueChange={setSelectedAnswer}>
             {question.options.map((option, index) => (
               option && (
-                <div key={index} className="flex items-center space-x-2 space-x-reverse">
+                <Label key={index} htmlFor={`option-${index}`} className="flex items-center gap-4 text-base p-4 border rounded-md cursor-pointer hover:bg-muted/50 has-[:checked]:bg-muted has-[:checked]:border-primary">
                   <RadioGroupItem value={option} id={`option-${index}`} />
-                  <Label htmlFor={`option-${index}`} className="text-base mr-4">
-                    {option}
-                  </Label>
-                </div>
+                  {option}
+                </Label>
               )
             ))}
           </RadioGroup>
         </CardContent>
         <CardFooter className="flex justify-end">
-          <Button onClick={handleNextQuestion}>
+          <Button onClick={handleNextQuestion} disabled={isSubmitting}>
+            {isSubmitting && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
             {currentQuestionIndex === quiz.questions.length - 1 ? "إنهاء الاختبار" : "السؤال التالي"}
           </Button>
         </CardFooter>

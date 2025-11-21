@@ -22,7 +22,9 @@ service cloud.firestore {
 
     // Rules for collections
     match /users/{userId} {
-      allow read, write: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow get, update, delete: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
     }
 
     match /subjects/{subjectId}/{document=**} {
@@ -32,7 +34,8 @@ service cloud.firestore {
     
     match /quizSubmissions/{submissionId} {
       allow create: if isSignedIn();
-      allow read: if isSignedIn() && (isOwner(submissionId) || isAdmin());
+      allow read, delete: if isSignedIn() && (isOwner(get(/databases/$(database)/documents/quizSubmissions/$(submissionId)).data.userId) || isAdmin());
+      allow list: if (isSignedIn() && request.query.where.userId == request.auth.uid) || isAdmin();
     }
   }
 }

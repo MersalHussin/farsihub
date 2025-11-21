@@ -1,6 +1,6 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
+import { getAuth, type Auth } from 'firebase/auth';
+import { getFirestore, type Firestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -11,15 +11,40 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Initialize Firebase
-let app;
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp();
+let app: FirebaseApp;
+let auth: Auth;
+let db: Firestore;
+
+function initializeFirebase() {
+    if (getApps().length === 0) {
+        app = initializeApp(firebaseConfig);
+    } else {
+        app = getApp();
+    }
+    auth = getAuth(app);
+    db = getFirestore(app);
 }
 
-const auth = getAuth(app);
-const db = getFirestore(app);
+// This function can be called to ensure Firebase is initialized.
+// It's safe to call this multiple times.
+const ensureFirebaseInitialized = () => {
+    if (!getApps().length) {
+        initializeFirebase();
+    }
+};
 
-export { app, auth, db };
+// Export getters that ensure initialization before returning instances.
+export const getFirebaseApp = (): FirebaseApp => {
+    ensureFirebaseInitialized();
+    return app;
+}
+
+export const getFirebaseAuth = (): Auth => {
+    ensureFirebaseInitialized();
+    return auth;
+}
+
+export const getFirebaseDb = (): Firestore => {
+    ensureFirebaseInitialized();
+    return db;
+}

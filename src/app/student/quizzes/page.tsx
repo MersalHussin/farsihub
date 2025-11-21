@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseDb } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
@@ -32,6 +32,7 @@ export default function StudentQuizzesPage() {
         if (!user) return;
         setLoading(true);
         try {
+            const db = getFirebaseDb();
             const q = query(
                 collection(db, "quizSubmissions"),
                 where("userId", "==", user.uid),

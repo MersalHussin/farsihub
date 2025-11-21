@@ -5,7 +5,7 @@ import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { setDoc, collection, serverTimestamp, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { getFirebaseDb } from "@/lib/firebase";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -40,7 +40,7 @@ import type { Subject } from "@/lib/types";
 const questionSchema = z.object({
   text: z.string().min(5, "يجب أن يكون السؤال 5 أحرف على الأقل."),
   options: z.array(z.string().min(1, "الخيار لا يمكن أن يكون فارغًا.")).min(2, "يجب أن يكون هناك خياران على الأقل."),
-  correctAnswer: z.string().min(1, "الرجاء تحديد الإجابة الصحيحة."),
+  correctAnswer: z.string({required_error: "الرجاء تحديد الإجابة الصحيحة."}).min(1, "الرجاء تحديد الإجابة الصحيحة."),
 });
 
 const formSchema = z.object({
@@ -97,6 +97,7 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
+      const db = getFirebaseDb();
       const lecturesCollectionRef = collection(db, "subjects", subject.id, "lectures");
       const newLectureDocRef = doc(lecturesCollectionRef);
 
@@ -113,7 +114,15 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
       };
 
       if (values.hasQuiz && values.quiz) {
-        lectureData.quiz = values.quiz;
+        // Ensure correctAnswer is not an empty string if options are filled.
+        const validatedQuiz = {
+            ...values.quiz,
+            questions: values.quiz.questions.map(q => ({
+                ...q,
+                options: q.options.filter(opt => opt.trim() !== ""), // remove empty options
+            })),
+        };
+        lectureData.quiz = validatedQuiz;
       }
 
       await setDoc(newLectureDocRef, lectureData);
@@ -272,31 +281,36 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
                                         render={({ field: radioField }) => (
                                             <FormItem className="space-y-3">
                                                 <FormLabel>الخيارات والإجابة الصحيحة</FormLabel>
-                                                <RadioGroup
-                                                    onValueChange={radioField.onChange}
-                                                    defaultValue={radioField.value}
-                                                    className="flex flex-col space-y-1"
-                                                >
-                                                    <div className="space-y-2">
-                                                        {[0, 1, 2, 3].map((optionIndex) => (
-                                                        <FormField
-                                                            key={optionIndex}
-                                                            control={form.control}
-                                                            name={`quiz.questions.${index}.options.${optionIndex}`}
-                                                            render={({ field }) => (
-                                                            <FormItem className="flex items-center space-x-3 space-y-0">
-                                                                <FormControl>
-                                                                <div className="flex items-center gap-2 w-full">
-                                                                    <RadioGroupItem value={field.value} />
-                                                                    <Input {...field} placeholder={`خيار ${optionIndex + 1}`} />
-                                                                </div>
-                                                                </FormControl>
-                                                            </FormItem>
-                                                            )}
-                                                        />
-                                                        ))}
-                                                    </div>
-                                                </RadioGroup>
+                                                 <FormDescription>
+                                                    اختر الإجابة الصحيحة بالضغط على الدائرة بجانبها.
+                                                </FormDescription>
+                                                <FormControl>
+                                                    <RadioGroup
+                                                        onValueChange={radioField.onChange}
+                                                        defaultValue={radioField.value}
+                                                        className="flex flex-col space-y-1"
+                                                    >
+                                                        <div className="space-y-2">
+                                                            {[0, 1, 2, 3].map((optionIndex) => (
+                                                            <FormField
+                                                                key={optionIndex}
+                                                                control={form.control}
+                                                                name={`quiz.questions.${index}.options.${optionIndex}`}
+                                                                render={({ field }) => (
+                                                                <FormItem className="flex items-center space-x-3 space-y-0">
+                                                                    <FormControl>
+                                                                    <div className="flex items-center gap-2 w-full">
+                                                                        <RadioGroupItem value={field.value} disabled={!field.value} />
+                                                                        <Input {...field} placeholder={`خيار ${optionIndex + 1}`} />
+                                                                    </div>
+                                                                    </FormControl>
+                                                                </FormItem>
+                                                                )}
+                                                            />
+                                                            ))}
+                                                        </div>
+                                                    </RadioGroup>
+                                                </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
@@ -338,5 +352,3 @@ export default function AddLectureDialog({ onLectureAdded, subject }: AddLecture
     </Dialog>
   );
 }
-
-    

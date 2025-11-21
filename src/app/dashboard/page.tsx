@@ -11,24 +11,24 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (loading) {
-      return; // Do nothing while loading
+      return; // Wait until loading is false
     }
-    if (user) {
-      if (user.role === 'admin') {
-        router.replace('/admin');
-      } else if (user.role === 'student') {
-        // If the student hasn't selected a year, force them to the onboarding page.
-        if (!user.year) {
-          router.replace('/student/onboarding');
-        } else {
-          // If year is selected, go to the main student page.
-          router.replace('/student');
-        }
-      }
-    } else {
-      // If no user, send to login.
+
+    if (!user) {
       router.replace('/login');
+      return;
     }
+
+    if (user.role === 'admin') {
+      router.replace('/admin');
+    } else if (user.role === 'student') {
+      if (!user.year) {
+        router.replace('/student/onboarding');
+      } else {
+        router.replace('/student');
+      }
+    }
+    
   }, [user, loading, router]);
   
   return (

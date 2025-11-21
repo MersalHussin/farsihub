@@ -54,7 +54,7 @@ export default function Home() {
               {!loading && (
                 user ? (
                    <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
-                    <Link href="/dashboard">اذهب إلى لوحة التحكم</Link>
+                    <Link href="/lectures">أبدأ التعلم</Link>
                   </Button>
                 ) : (
                   <>
