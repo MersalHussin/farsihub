@@ -103,8 +103,8 @@ export default function LoginPage() {
       if (!auth) throw new Error("Firebase Auth is not initialized.");
       await sendPasswordResetEmail(auth, values.email);
       toast({
-        title: "تم إرسال البريد الإلكتروني",
-        description: "يرجى التحقق من بريدك الإلكتروني لإعادة تعيين كلمة المرور.",
+        title: "تم إرسال البريد الإلكتروني بنجاح",
+        description: "يرجى التحقق من صندوق الوارد الخاص بك، ولا تنس تفقد مجلد الرسائل غير المرغوب فيها (Spam).",
       });
       setIsResetDialogOpen(false);
       forgotPasswordForm.reset();
