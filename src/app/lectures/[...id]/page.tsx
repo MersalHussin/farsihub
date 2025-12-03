@@ -6,198 +6,18 @@ import { doc, getDoc, collection, addDoc, serverTimestamp, query, where, orderBy
 import { getFirebaseDb } from "@/lib/firebase";
 import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import type { Lecture, QnA } from "@/lib/types";
+import type { Lecture } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowRight, FileQuestion, FileText, BookText, MessageSquarePlus, Send, HelpCircle, CheckCircle } from "lucide-react";
+import { Loader2, ArrowRight, FileQuestion, FileText, BookText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 import { VideoPlayerDialog } from "./video-player-dialog";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
-import { Textarea } from "@/components/ui/textarea";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { formatDistanceToNow } from "date-fns";
-import { ar } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { errorEmitter } from "@/lib/error-emitter";
 import { FirestorePermissionError } from "@/lib/errors";
 
-const AskQuestionForm = ({ lecture }: { lecture: Lecture }) => {
-    const [question, setQuestion] = useState("");
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const { user } = useAuth();
-    const { toast } = useToast();
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!user) {
-            toast({ variant: "destructive", title: "يجب تسجيل الدخول لطرح سؤال." });
-            return;
-        }
-        if (!question.trim()) {
-            toast({ variant: "destructive", title: "لا يمكن إرسال سؤال فارغ." });
-            return;
-        }
-
-        setIsSubmitting(true);
-        const db = getFirebaseDb();
-        if(!db) {
-            toast({ variant: "destructive", title: "فشل الاتصال بقاعدة البيانات." });
-            setIsSubmitting(false);
-            return;
-        };
-
-        const qnaData = {
-            question,
-            lectureId: lecture.id,
-            lectureTitle: lecture.title,
-            subjectId: lecture.subjectId,
-            subjectName: lecture.subjectName,
-            userId: user.uid,
-            userName: user.name,
-            userEmail: user.email,
-            userPhotoURL: user.photoURL || null,
-            answered: false,
-            answer: null,
-            createdAt: serverTimestamp(),
-            answeredAt: null,
-        };
-        
-        const qnaCollectionRef = collection(db, "qna");
-
-        addDoc(qnaCollectionRef, qnaData)
-        .then(() => {
-            setQuestion("");
-            toast({ title: "تم إرسال سؤالك بنجاح!", description: "سيتم مراجعته والإجابة عليه قريبًا." });
-        })
-        .catch((error) => {
-            console.error("Error submitting question:", error);
-            const permissionError = new FirestorePermissionError({
-                path: 'qna',
-                operation: 'create',
-                requestResourceData: qnaData
-            });
-            errorEmitter.emit('permission-error', permissionError);
-        })
-        .finally(() => {
-            setIsSubmitting(false);
-        });
-    };
-    
-    if (!user) {
-        return (
-            <div className="text-center p-4 border rounded-lg bg-muted/50">
-                <p>
-                    <Link href="/login" className="underline font-bold">سجل الدخول</Link> أو 
-                    <Link href="/signup" className="underline font-bold"> أنشئ حسابًا جديدًا </Link>
-                     لتتمكن من طرح الأسئلة.
-                </p>
-            </div>
-        )
-    }
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4">
-            <Textarea
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                placeholder="لديك سؤال؟ اكتبه هنا..."
-                rows={4}
-            />
-            <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <Send className="ml-2 h-4 w-4" />}
-                إرسال السؤال
-            </Button>
-        </form>
-    )
-}
-
-const QnaSection = ({ lecture }: { lecture: Lecture }) => {
-    const [questions, setQuestions] = useState<QnA[]>([]);
-    const [loading, setLoading] = useState(true);
-    const { toast } = useToast();
-
-    useEffect(() => {
-        if (!lecture) return;
-
-        const db = getFirebaseDb();
-        if(!db) return;
-        
-        const q = query(
-            collection(db, "qna"),
-            where("lectureId", "==", lecture.id),
-            where("answered", "==", true),
-            orderBy("answeredAt", "desc")
-        );
-
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const answeredQuestions = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as QnA));
-            setQuestions(answeredQuestions);
-            setLoading(false);
-        }, (error) => {
-            console.error("Error fetching answered questions:", error);
-            const permissionError = new FirestorePermissionError({
-                path: `qna`,
-                operation: 'list',
-            });
-            errorEmitter.emit('permission-error', permissionError);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [lecture, toast]);
-
-    return (
-        <Card>
-            <CardHeader>
-                <div className="flex items-center gap-3">
-                    <HelpCircle className="h-6 w-6 text-primary"/>
-                    <CardTitle>الأسئلة والأجوبة</CardTitle>
-                </div>
-                <CardDescription>
-                    اطرح سؤالك أو تصفح أسئلة زملائك التي تمت الإجابة عليها.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-                <AskQuestionForm lecture={lecture} />
-                <Separator />
-                {loading ? (
-                    <div className="flex justify-center p-8"><Loader2 className="animate-spin"/></div>
-                ) : questions.length > 0 ? (
-                    <Accordion type="single" collapsible className="w-full space-y-2">
-                        {questions.map((qna) => (
-                             <AccordionItem value={qna.id} key={qna.id} className="border-b">
-                                <AccordionTrigger className="text-right text-base font-semibold hover:no-underline">
-                                    <div className="flex items-start gap-3">
-                                      <HelpCircle className="h-5 w-5 text-muted-foreground shrink-0 mt-1"/>
-                                      <span>{qna.question}</span>
-                                    </div>
-                                </AccordionTrigger>
-                                <AccordionContent className="pt-2">
-                                   <div className="p-4 bg-primary/5 rounded-lg space-y-3">
-                                        <div className="flex items-center gap-2 text-primary font-bold">
-                                           <CheckCircle className="h-5 w-5"/>
-                                           <span>الإجابة</span>
-                                        </div>
-                                       <p className="whitespace-pre-wrap leading-relaxed text-foreground/90">
-                                            {qna.answer}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground pt-2 border-t">
-                                            تمت الإجابة {qna.answeredAt ? formatDistanceToNow(qna.answeredAt.toDate(), { addSuffix: true, locale: ar }) : ''}
-                                        </p>
-                                   </div>
-                                </AccordionContent>
-                             </AccordionItem>
-                        ))}
-                    </Accordion>
-                ) : (
-                    <p className="text-center text-muted-foreground p-4">لا توجد أسئلة تمت الإجابة عليها لهذه المحاضرة بعد. كن أول من يسأل!</p>
-                )}
-            </CardContent>
-        </Card>
-    )
-}
 
 export default function LectureDetailsPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -340,8 +160,6 @@ export default function LectureDetailsPage() {
                     </Card>
                )}
             </div>
-            <Separator />
-            <QnaSection lecture={lecture} />
       </div>
     );
   }

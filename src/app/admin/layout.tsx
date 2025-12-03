@@ -28,7 +28,6 @@ import Image from 'next/image';
 const navItems = [
   { href: '/admin/subjects', label: 'المواد الدراسية', icon: Library },
   { href: '/admin/students', label: 'الطلاب', icon: Users },
-  { href: '/admin/qna', label: 'الأسئلة والأجوبة', icon: MessageSquareQuote },
   { href: '/admin/assignments', label: 'التكليفات', icon: ClipboardCheck },
 ];
 

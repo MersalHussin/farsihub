@@ -92,27 +92,6 @@
         "submittedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["quizId", "quizTitle", "lectureId", "subjectId", "userId", "score", "submittedAt"]
-    },
-    "qna": {
-      "title": "QnA",
-      "description": "A question and answer for a lecture.",
-      "type": "object",
-      "properties": {
-        "question": { "type": "string" },
-        "answer": { "type": "string" },
-        "answered": { "type": "boolean" },
-        "lectureId": { "type": "string" },
-        "lectureTitle": { "type": "string" },
-        "subjectId": { "type": "string" },
-        "subjectName": { "type": "string" },
-        "userId": { "type": "string" },
-        "userName": { "type": "string" },
-        "userEmail": { "type": "string", "format": "email" },
-        "userPhotoURL": { "type": "string", "format": "uri" },
-        "createdAt": { "type": "string", "format": "date-time" },
-        "answeredAt": { "type": "string", "format": "date-time" }
-      },
-      "required": ["question", "lectureId", "lectureTitle", "subjectId", "subjectName", "userId", "userName", "userEmail", "createdAt", "answered"]
     }
   },
   "auth": {
@@ -151,23 +130,6 @@
                 {"fieldPath": "userId", "order": "ASCENDING"},
                 {"fieldPath": "submittedAt", "order": "DESCENDING"}
             ]
-        },
-        {
-            "collectionGroup": "qna",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {"fieldPath": "lectureId", "order": "ASCENDING"},
-                {"fieldPath": "answered", "order": "ASCENDING"},
-                {"fieldPath": "answeredAt", "order": "DESCENDING"}
-            ]
-        },
-        {
-            "collectionGroup": "qna",
-            "queryScope": "COLLECTION",
-            "fields": [
-                {"fieldPath": "answered", "order": "ASCENDING"},
-                {"fieldPath": "createdAt", "order": "DESCENDING"}
-            ]
         }
     ],
     "/users/{userId}": {
@@ -185,10 +147,6 @@
     "/quizSubmissions/{submissionId}": {
       "schema": { "$ref": "#/entities/quizSubmission" },
       "description": "Student quiz submissions."
-    },
-    "/qna/{qnaId}": {
-      "schema": { "$ref": "#/entities/qna" },
-      "description": "Questions and Answers."
     }
   },
   "securityRules": {
@@ -214,11 +172,6 @@
             "allow create": "if isSignedIn();",
             "allow read, delete": "if isSignedIn() && (isOwner(get(/databases/$(database)/documents/quizSubmissions/$(submissionId)).data.userId) || isAdmin());",
             "allow list": "if (isSignedIn() && request.query.where.userId == request.auth.uid) || isAdmin();"
-          },
-          "match /qna/{qnaId}": {
-            "allow create": "if isSignedIn();",
-            "allow read, update": "if isAdmin();",
-            "allow list": "if isAdmin() || (isSignedIn() && request.query.where.answered == true);"
           }
         }
       }
