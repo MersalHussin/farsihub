@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -27,6 +28,7 @@ export default function StudentsPage() {
 
   useEffect(() => {
     const db = getFirebaseDb();
+    if (!db) return;
     const q = query(collection(db, "users"), where("role", "==", "student"), orderBy("createdAt", "desc"));
     
     const unsubscribe = onSnapshot(q, 
@@ -45,18 +47,13 @@ export default function StudentsPage() {
         setStudents(studentsList);
         setLoading(false);
       }, 
-      async (error) => {
+      (error) => {
+        console.error("Error fetching students: ", error);
         const permissionError = new FirestorePermissionError({
             path: 'users',
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        console.error("Error fetching students: ", error);
-        toast({
-          variant: "destructive",
-          title: "فشل تحميل الطلاب",
-          description: "حدث خطأ أثناء جلب بيانات الطلاب.",
-        });
         setLoading(false);
       }
     );
@@ -66,29 +63,9 @@ export default function StudentsPage() {
 
   const handleApprovalChange = (studentId: string, approved: boolean) => {
     const db = getFirebaseDb();
+    if (!db) return;
     const studentRef = doc(db, "users", studentId);
     const updateData = { approved };
-    updateDoc(studentRef, updateData)
-      .then(() => {
-        toast({
-          title: "تم تحديث الحالة",
-          description: `تم ${approved ? 'قبول' : 'تعليق'} الطالب بنجاح.`,
-        });
-      })
-      .catch(async (error) => {
-        // Revert UI change on error.
-        setStudents((prevStudents) =>
-          prevStudents.map((student) =>
-            student.id === studentId ? { ...student, approved: !approved } : student
-          )
-        );
-        const permissionError = new FirestorePermissionError({
-            path: studentRef.path,
-            operation: 'update',
-            requestResourceData: updateData,
-        });
-        errorEmitter.emit('permission-error', permissionError);
-    });
     
     // Optimistic UI update
     setStudents((prevStudents) =>
@@ -96,6 +73,29 @@ export default function StudentsPage() {
         student.id === studentId ? { ...student, approved } : student
       )
     );
+
+    updateDoc(studentRef, updateData)
+      .then(() => {
+        toast({
+          title: "تم تحديث الحالة",
+          description: `تم ${approved ? 'قبول' : 'تعليق'} الطالب بنجاح.`,
+        });
+      })
+      .catch((serverError) => {
+        // Revert UI change on error.
+        setStudents((prevStudents) =>
+          prevStudents.map((student) =>
+            student.id === studentId ? { ...student, approved: !approved } : student
+          )
+        );
+        console.error("Error updating student approval:", serverError);
+        const permissionError = new FirestorePermissionError({
+            path: studentRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+    });
   };
 
   if (loading) {

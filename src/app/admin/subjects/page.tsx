@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -46,6 +47,7 @@ export default function SubjectsPage() {
   const fetchSubjects = useCallback(() => {
     setLoading(true);
     const db = getFirebaseDb();
+    if (!db) return () => {};
     const subjectsCollection = collection(db, "subjects");
     const q = query(subjectsCollection, orderBy("createdAt", "desc"));
     
@@ -62,12 +64,6 @@ export default function SubjectsPage() {
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-
-        toast({
-          variant: "destructive",
-          title: "فشل تحميل المواد الدراسية",
-          description: "ليست لديك الصلاحية لعرض المواد. يرجى مراجعة قواعد الأمان في Firebase.",
-        });
         setLoading(false);
       }
     );
@@ -82,16 +78,20 @@ export default function SubjectsPage() {
 
   const handleDelete = async (subjectId: string) => {
     const db = getFirebaseDb();
+    if (!db) return;
     const subjectDocRef = doc(db, "subjects", subjectId);
-    // You might want to delete subcollections like lectures here as well
+    
     deleteDoc(subjectDocRef)
       .then(() => {
         toast({ title: "تم حذف المادة" });
-        // The onSnapshot listener will automatically update the UI
       })
       .catch((error) => {
         console.error("Error deleting subject: ", error);
-        toast({ variant: "destructive", title: "فشل حذف المادة" });
+        const permissionError = new FirestorePermissionError({
+          path: subjectDocRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
   };
 

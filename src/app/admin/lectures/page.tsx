@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -45,8 +46,10 @@ export default function LecturesPage() {
     let subjectUnsubscribe: (() => void) | null = null;
     let lecturesUnsubscribe: (() => void) | null = null;
 
-    try {
+    
       const db = getFirebaseDb();
+      if (!db) return () => {};
+
       const subjectRef = doc(db, "subjects", subjectId);
       subjectUnsubscribe = onSnapshot(subjectRef, (subjectSnap) => {
         if(subjectSnap.exists()) {
@@ -58,7 +61,11 @@ export default function LecturesPage() {
         }
       }, (error) => {
         console.error("Error fetching subject: ", error);
-        toast({ variant: "destructive", title: "فشل تحميل بيانات المادة" });
+        const permissionError = new FirestorePermissionError({
+            path: subjectRef.path,
+            operation: 'get',
+        });
+        errorEmitter.emit('permission-error', permissionError);
         setLoading(false);
       });
 
@@ -70,28 +77,14 @@ export default function LecturesPage() {
         setLectures(lecturesList);
         setLoading(false);
       }, (error) => {
-         console.error("Error fetching lectures: ", error);
+        console.error("Error fetching lectures: ", error);
         const permissionError = new FirestorePermissionError({
             path: `subjects/${subjectId}/lectures`,
             operation: 'list',
         });
         errorEmitter.emit('permission-error', permissionError);
-        toast({
-          variant: "destructive",
-          title: "فشل تحميل المحاضرات",
-        });
         setLoading(false);
       });
-
-    } catch (error) {
-      console.error("Error setting up listeners: ", error);
-      toast({
-        variant: "destructive",
-        title: "فشل تحميل البيانات",
-        description: "حدث خطأ أثناء إعداد جلب البيانات.",
-      });
-      setLoading(false);
-    }
     
     return () => {
       if (subjectUnsubscribe) subjectUnsubscribe();
@@ -107,21 +100,25 @@ export default function LecturesPage() {
 
   const handleDelete = async (lectureId: string) => {
     if (!subjectId) return;
-    try {
+    
       const db = getFirebaseDb();
+      if (!db) return;
       const lectureDocRef = doc(db, "subjects", subjectId, "lectures", lectureId);
-      await deleteDoc(lectureDocRef);
-      toast({
-        title: "تم حذف المحاضرة",
+      
+      deleteDoc(lectureDocRef)
+      .then(() => {
+        toast({
+          title: "تم حذف المحاضرة",
+        });
+      })
+      .catch((error) => {
+        console.error("Error deleting lecture: ", error);
+        const permissionError = new FirestorePermissionError({
+          path: lectureDocRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-      // UI will update via snapshot listener
-    } catch (error) {
-      console.error("Error deleting lecture: ", error);
-      toast({
-        variant: "destructive",
-        title: "فشل حذف المحاضرة",
-      });
-    }
   };
 
   if (!subjectId) {
