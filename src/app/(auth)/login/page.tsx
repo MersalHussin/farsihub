@@ -52,7 +52,6 @@ const forgotPasswordSchema = z.object({
 export default function LoginPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const { loading, user } = useAuth();
   const [isResetLoading, setIsResetLoading] = useState(false);
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
@@ -124,15 +123,6 @@ export default function LoginPage() {
     }
   }
   
-  if (loading || user) {
-     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-        <p className="ml-4">جارِ التحقق من جلسة الدخول...</p>
-      </div>
-    );
-  }
-
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
