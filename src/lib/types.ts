@@ -1,3 +1,4 @@
+
 import type { User as FirebaseUser } from 'firebase/auth';
 import type { Timestamp } from 'firebase/firestore';
 
@@ -14,8 +15,9 @@ export type Semester = "first" | "second";
 
 export type Question = {
   text: string;
-  options: string[];
-  correctAnswer: string;
+  type: 'mcq' | 'essay';
+  options?: string[];
+  correctAnswer?: string;
 };
 
 export type Quiz = {
@@ -36,6 +38,7 @@ export type Lecture = {
   title: string;
   description: string;
   pdfUrl: string;
+  summary: string;
   subjectId: string;
   subjectName: string; // For easy display
   year: LectureYear;

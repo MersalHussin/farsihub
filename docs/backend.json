@@ -39,6 +39,7 @@
         "title": { "type": "string" },
         "description": { "type": "string" },
         "pdfUrl": { "type": "string", "format": "uri" },
+        "summary": { "type": "string" },
         "youtubeVideoUrl": { "type": "string", "format": "uri" },
         "subjectId": { "type": "string" },
         "subjectName": { "type": "string" },
@@ -47,7 +48,7 @@
         "createdAt": { "type": "string", "format": "date-time" },
         "quiz": { "$ref": "#/entities/quiz" }
       },
-      "required": ["id", "title", "description", "pdfUrl", "subjectId", "subjectName", "year", "semester", "createdAt"]
+      "required": ["id", "title", "description", "pdfUrl", "summary", "subjectId", "subjectName", "year", "semester", "createdAt"]
     },
     "quiz": {
       "title": "Quiz",
@@ -68,10 +69,11 @@
         "type": "object",
         "properties": {
             "text": { "type": "string" },
+            "type": { "type": "string", "enum": ["mcq", "essay"] },
             "options": { "type": "array", "items": { "type": "string" } },
             "correctAnswer": { "type": "string" }
         },
-        "required": ["text", "options", "correctAnswer"]
+        "required": ["text", "type"]
     },
     "quizSubmission": {
       "title": "Quiz Submission",

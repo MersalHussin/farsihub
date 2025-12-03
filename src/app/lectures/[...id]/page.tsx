@@ -8,13 +8,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { Lecture } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowRight, FileQuestion, FileText } from "lucide-react";
+import { Loader2, ArrowRight, FileQuestion, FileText, BookText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 import { VideoPlayerDialog } from "./video-player-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export default function LectureDetailsPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -78,52 +78,70 @@ export default function LectureDetailsPage() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             <div>
               <Button variant="ghost" onClick={() => router.back()} className="mb-4">
                   <ArrowRight className="ml-2 h-4 w-4" />
                   عودة
               </Button>
-              <h1 className="text-3xl font-bold">{lecture.title}</h1>
+              <h1 className="text-3xl md:text-4xl font-bold">{lecture.title}</h1>
               <p className="text-lg text-muted-foreground mt-2">{lecture.description}</p>
             </div>
             <Separator />
     
-            <div className="space-y-6">
-              <Card className="w-full max-w-2xl mx-auto">
-                <CardHeader className="items-center text-center">
-                    <div className="p-4 bg-primary/10 rounded-full mb-2">
-                        <FileText className="w-12 h-12 text-primary" />
-                    </div>
-                    <CardTitle>ملف المحاضرة (PDF)</CardTitle>
-                </CardHeader>
-                <CardContent className="text-center">
-                     <Button size="lg" asChild>
-                        <a href={lecture.pdfUrl} target="_blank" rel="noopener noreferrer">
-                            ذاكر المحاضرة
-                        </a>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+              <div className="space-y-6">
+                 <Card className="w-full">
+                    <CardHeader className="items-center text-center">
+                        <div className="p-4 bg-primary/10 rounded-full mb-2">
+                            <FileText className="w-12 h-12 text-primary" />
+                        </div>
+                        <CardTitle>ملف المحاضرة (PDF)</CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-center">
+                        <Button size="lg" asChild>
+                            <a href={lecture.pdfUrl} target="_blank" rel="noopener noreferrer">
+                                ذاكر المحاضرة
+                            </a>
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                    {lecture.youtubeVideoUrl && (
+                    <VideoPlayerDialog youtubeUrl={lecture.youtubeVideoUrl} />
+                    )}
+                    {lecture.quiz ? (
+                    <Button size="lg" asChild>
+                        <Link href={`/quizzes/${lecture.subjectId}/${lecture.id}`}>
+                        <FileQuestion className="ml-2 h-5 w-5" />
+                        بدء اختبار: {lecture.quiz.title}
+                        </Link>
                     </Button>
-                </CardContent>
-              </Card>
-              
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                {lecture.youtubeVideoUrl && (
-                  <VideoPlayerDialog youtubeUrl={lecture.youtubeVideoUrl} />
-                )}
-                {lecture.quiz ? (
-                  <Button size="lg" asChild>
-                    <Link href={`/quizzes/${lecture.subjectId}/${lecture.id}`}>
-                      <FileQuestion className="ml-2 h-5 w-5" />
-                      بدء اختبار: {lecture.quiz.title}
-                    </Link>
-                  </Button>
-                ) : (
-                  <Button size="lg" variant="secondary" disabled>
-                      <FileQuestion className="ml-2 h-5 w-5" />
-                      لا يوجد اختبار لهذه المحاضرة
-                  </Button>
-                )}
+                    ) : (
+                    <Button size="lg" variant="secondary" disabled>
+                        <FileQuestion className="ml-2 h-5 w-5" />
+                        لا يوجد اختبار لهذه المحاضرة
+                    </Button>
+                    )}
+                </div>
               </div>
+
+               {lecture.summary && (
+                    <Card className="w-full">
+                        <CardHeader>
+                            <div className="flex items-center gap-3">
+                               <BookText className="h-6 w-6 text-primary"/>
+                               <CardTitle>ملخص كتابي للمحاضرة</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="prose prose-lg max-w-none text-foreground whitespace-pre-wrap">
+                                {lecture.summary}
+                            </div>
+                        </CardContent>
+                    </Card>
+               )}
             </div>
       </div>
     );

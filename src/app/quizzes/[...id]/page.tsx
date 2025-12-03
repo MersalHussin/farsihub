@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -15,17 +16,9 @@ import { Loader2, ArrowRight } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Confetti from 'react-dom-confetti';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Info } from "lucide-react";
 
 export default function TakeQuizPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -38,8 +31,6 @@ export default function TakeQuizPage() {
   const [score, setScore] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [previousSubmission, setPreviousSubmission] = useState<QuizSubmission | null>(null);
-
 
   const { toast } = useToast();
   const router = useRouter();
@@ -96,7 +87,10 @@ export default function TakeQuizPage() {
 
 
   const handleNextQuestion = () => {
-    if (selectedAnswer === null) {
+    const currentQuestion = quiz?.questions[currentQuestionIndex];
+    if (!currentQuestion) return;
+
+    if (currentQuestion.type === 'mcq' && selectedAnswer === null) {
       toast({
         variant: "destructive",
         title: "الرجاء اختيار إجابة",
@@ -105,7 +99,16 @@ export default function TakeQuizPage() {
       return;
     }
 
-    const newAnswers = { ...answers, [currentQuestionIndex]: selectedAnswer };
+    if (currentQuestion.type === 'essay' && (selectedAnswer === null || selectedAnswer.trim() === '')) {
+      toast({
+        variant: "destructive",
+        title: "الرجاء كتابة إجابة",
+        description: "يجب عليك كتابة إجابة للسؤال المقالي.",
+      });
+      return;
+    }
+
+    const newAnswers = { ...answers, [currentQuestionIndex]: selectedAnswer! };
     setAnswers(newAnswers);
     setSelectedAnswer(null);
 
@@ -121,7 +124,10 @@ export default function TakeQuizPage() {
     setIsSubmitting(true);
     let correctCount = 0;
     quiz.questions.forEach((question, index) => {
-        if(finalAnswers[index] === question.correctAnswer) {
+        if(question.type === 'mcq' && finalAnswers[index] === question.correctAnswer) {
+            correctCount++;
+        }
+        if(question.type === 'essay' && finalAnswers[index].trim() !== '') {
             correctCount++;
         }
     });
@@ -227,16 +233,39 @@ export default function TakeQuizPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           <p className="text-lg font-semibold text-right">{question.text}</p>
-          <RadioGroup dir="rtl" value={selectedAnswer ?? ''} onValueChange={setSelectedAnswer}>
-            {question.options.map((option, index) => (
-              option && (
-                <Label key={index} htmlFor={`option-${index}`} className="flex items-center gap-4 text-base p-4 border rounded-md cursor-pointer hover:bg-muted/50 has-[:checked]:bg-muted has-[:checked]:border-primary">
-                  <RadioGroupItem value={option} id={`option-${index}`} />
-                  {option}
-                </Label>
-              )
-            ))}
-          </RadioGroup>
+          
+          {question.type === 'mcq' && question.options && (
+            <RadioGroup dir="rtl" value={selectedAnswer ?? ''} onValueChange={setSelectedAnswer}>
+                {question.options.map((option, index) => (
+                option && (
+                    <Label key={index} htmlFor={`option-${index}`} className="flex items-center gap-4 text-base p-4 border rounded-md cursor-pointer hover:bg-muted/50 has-[:checked]:bg-muted has-[:checked]:border-primary">
+                    <RadioGroupItem value={option} id={`option-${index}`} />
+                    {option}
+                    </Label>
+                )
+                ))}
+            </RadioGroup>
+          )}
+
+          {question.type === 'essay' && (
+            <div className="space-y-4">
+                <Textarea 
+                    rows={8}
+                    placeholder="اكتب إجابتك هنا..."
+                    value={selectedAnswer ?? ''}
+                    onChange={(e) => setSelectedAnswer(e.target.value)}
+                    className="text-base"
+                />
+                <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>ملاحظة هامة</AlertTitle>
+                    <AlertDescription>
+                        سيتم احتساب هذا السؤال صحيحاً بمجرد كتابة أي إجابة. يمكنك مراجعة إجابتك لاحقاً مع المسؤول.
+                    </AlertDescription>
+                </Alert>
+            </div>
+          )}
+
         </CardContent>
         <CardFooter className="flex justify-end">
           <Button onClick={handleNextQuestion} disabled={isSubmitting}>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -36,17 +37,34 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import type { Subject, Lecture } from "@/lib/types";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const questionSchema = z.object({
   text: z.string().min(5, "يجب أن يكون السؤال 5 أحرف على الأقل."),
-  options: z.array(z.string().min(1, "الخيار لا يمكن أن يكون فارغًا.")).min(2, "يجب أن يكون هناك خياران على الأقل."),
-  correctAnswer: z.string({required_error: "الرجاء تحديد الإجابة الصحيحة."}).min(1, "الرجاء تحديد الإجابة الصحيحة."),
+  type: z.enum(['mcq', 'essay'], { required_error: "الرجاء تحديد نوع السؤال."}),
+  options: z.array(z.string()).optional(),
+  correctAnswer: z.string().optional(),
+}).refine(data => {
+    if (data.type === 'mcq') {
+        return Array.isArray(data.options) && data.options.filter(opt => opt.trim() !== "").length >= 2 && data.correctAnswer;
+    }
+    return true;
+}, {
+    message: "لأسئلة الاختيار من متعدد، يجب توفير خيارين على الأقل وتحديد إجابة صحيحة.",
+    path: ["correctAnswer"],
 });
 
 const formSchema = z.object({
   title: z.string().min(3, { message: "يجب أن يتكون العنوان من 3 أحرف على الأقل." }),
   description: z.string().min(10, { message: "يجب أن يتكون الوصف من 10 أحرف على الأقل." }),
   pdfUrl: z.string().url({ message: "الرجاء إدخال رابط صالح." }),
+  summary: z.string().optional(),
   youtubeVideoUrl: z.string().url({ message: "الرجاء إدخال رابط يوتيوب صالح." }).optional().or(z.literal('')),
   hasQuiz: z.boolean().default(false),
   quiz: z.object({
@@ -81,6 +99,7 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
       title: lecture.title,
       description: lecture.description,
       pdfUrl: lecture.pdfUrl,
+      summary: lecture.summary || "",
       youtubeVideoUrl: lecture.youtubeVideoUrl || '',
       hasQuiz: !!lecture.quiz,
       quiz: lecture.quiz || { title: "", questions: [] },
@@ -93,6 +112,7 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
   });
 
   const hasQuiz = form.watch("hasQuiz");
+  const questions = form.watch("quiz.questions");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -105,15 +125,22 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
         title: values.title,
         description: values.description,
         pdfUrl: values.pdfUrl,
+        summary: values.summary || "",
         youtubeVideoUrl: values.youtubeVideoUrl || deleteField(),
         quiz: values.hasQuiz && values.quiz ? values.quiz : deleteField(),
       };
       
       if (lectureData.quiz) {
-         lectureData.quiz.questions = lectureData.quiz.questions.map((q: any) => ({
-                ...q,
-                options: q.options.filter((opt: string) => opt.trim() !== ""), // remove empty options
-            }));
+         lectureData.quiz.questions = lectureData.quiz.questions.map((q: any) => {
+             if (q.type === 'mcq') {
+                 return {
+                    ...q,
+                    options: q.options?.filter((opt: string) => opt && opt.trim() !== ""),
+                };
+             }
+             const { options, correctAnswer, ...essayQuestion } = q;
+             return essayQuestion;
+        });
       }
 
 
@@ -180,6 +207,21 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
                         <FormMessage />
                         </FormItem>
                     )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="summary"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>ملخص كتابي للمحاضرة (اختياري)</FormLabel>
+                            <FormControl>
+                                <Textarea {...field} rows={6} placeholder="اكتب ملخصاً كتابياً للمحاضرة هنا..."/>
+                            </FormControl>
+                             <FormDescription>سيظهر هذا الملخص للطلاب في صفحة تفاصيل المحاضرة.</FormDescription>
+                            <FormMessage />
+                            </FormItem>
+                        )}
                     />
                     
                     <FormField
@@ -255,7 +297,7 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
                                 <FormLabel>أسئلة الاختبار</FormLabel>
                                 <div className="space-y-4 mt-2">
                                     {fields.map((field, index) => (
-                                    <div key={field.id} className="border p-4 rounded-md space-y-3 relative">
+                                    <div key={field.id} className="border p-4 rounded-md space-y-4 relative">
                                         <Button 
                                             type="button" 
                                             variant="ghost" 
@@ -278,47 +320,71 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
                                             </FormItem>
                                         )}
                                         />
-                                        
+
                                         <FormField
-                                        control={form.control}
-                                        name={`quiz.questions.${index}.correctAnswer`}
-                                        render={({ field: radioField }) => (
-                                            <FormItem className="space-y-3">
-                                                <FormLabel>الخيارات والإجابة الصحيحة</FormLabel>
-                                                 <FormDescription>
-                                                    اختر الإجابة الصحيحة بالضغط على الدائرة بجانبها.
-                                                </FormDescription>
-                                                <FormControl>
-                                                    <RadioGroup
-                                                        onValueChange={radioField.onChange}
-                                                        defaultValue={radioField.value}
-                                                        className="flex flex-col space-y-1"
-                                                    >
-                                                        <div className="space-y-2">
-                                                            {[0, 1, 2, 3].map((optionIndex) => (
-                                                            <FormField
-                                                                key={optionIndex}
-                                                                control={form.control}
-                                                                name={`quiz.questions.${index}.options.${optionIndex}`}
-                                                                render={({ field }) => (
-                                                                <FormItem className="flex items-center space-x-3 space-y-0">
-                                                                    <FormControl>
-                                                                    <div className="flex items-center gap-2 w-full">
-                                                                        <RadioGroupItem value={field.value ?? ''} disabled={!field.value} />
-                                                                        <Input {...field} placeholder={`خيار ${optionIndex + 1}`} />
-                                                                    </div>
-                                                                    </FormControl>
-                                                                </FormItem>
-                                                                )}
-                                                            />
-                                                            ))}
-                                                        </div>
-                                                    </RadioGroup>
-                                                </FormControl>
+                                            control={form.control}
+                                            name={`quiz.questions.${index}.type`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                <FormLabel>نوع السؤال</FormLabel>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="اختر نوع السؤال" />
+                                                    </SelectTrigger>
+                                                    </FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="mcq">اختيار من متعدد</SelectItem>
+                                                        <SelectItem value="essay">مقالي</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
                                                 <FormMessage />
-                                            </FormItem>
-                                        )}
+                                                </FormItem>
+                                            )}
                                         />
+
+                                        {questions?.[index]?.type === 'mcq' && (
+                                            <FormField
+                                            control={form.control}
+                                            name={`quiz.questions.${index}.correctAnswer`}
+                                            render={({ field: radioField }) => (
+                                                <FormItem className="space-y-3">
+                                                    <FormLabel>الخيارات والإجابة الصحيحة</FormLabel>
+                                                    <FormDescription>
+                                                        اختر الإجابة الصحيحة بالضغط على الدائرة بجانبها.
+                                                    </FormDescription>
+                                                    <FormControl>
+                                                        <RadioGroup
+                                                            onValueChange={radioField.onChange}
+                                                            defaultValue={radioField.value}
+                                                            className="flex flex-col space-y-1"
+                                                        >
+                                                            <div className="space-y-2">
+                                                                {[0, 1, 2, 3].map((optionIndex) => (
+                                                                <FormField
+                                                                    key={optionIndex}
+                                                                    control={form.control}
+                                                                    name={`quiz.questions.${index}.options.${optionIndex}`}
+                                                                    render={({ field }) => (
+                                                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                                                        <FormControl>
+                                                                        <div className="flex items-center gap-2 w-full">
+                                                                            <RadioGroupItem value={field.value ?? ''} disabled={!field.value} />
+                                                                            <Input {...field} placeholder={`خيار ${optionIndex + 1}`} />
+                                                                        </div>
+                                                                        </FormControl>
+                                                                    </FormItem>
+                                                                    )}
+                                                                />
+                                                                ))}
+                                                            </div>
+                                                        </RadioGroup>
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                            />
+                                        )}
                                     </div>
                                     ))}
                                 </div>
@@ -327,7 +393,7 @@ export default function EditLectureDialog({ onLectureUpdated, subject, lecture }
                                     variant="outline"
                                     size="sm"
                                     className="mt-4"
-                                    onClick={() => append({ text: "", options: ["", "", "", ""], correctAnswer: "" })}
+                                    onClick={() => append({ text: "", type: "mcq", options: ["", "", "", ""], correctAnswer: "" })}
                                 >
                                     <PlusCircle className="ml-2 h-4 w-4" />
                                     إضافة سؤال
