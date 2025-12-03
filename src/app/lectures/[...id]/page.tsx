@@ -106,8 +106,8 @@ export default function LectureDetailsPage() {
             </div>
             <Separator />
     
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start justify-center">
-              <div className="space-y-6">
+            <div className="flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-center">
+              <div className="space-y-6 w-full max-w-md">
                  <Card className="w-full">
                     <CardHeader className="items-center text-center">
                         <div className="p-4 bg-primary/10 rounded-full mb-2">
@@ -145,7 +145,7 @@ export default function LectureDetailsPage() {
               </div>
 
                {lecture.summary && (
-                    <Card className="w-full">
+                    <Card className="w-full max-w-md">
                         <CardHeader>
                             <div className="flex items-center gap-3">
                                <BookText className="h-6 w-6 text-primary"/>
