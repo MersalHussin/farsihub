@@ -1,15 +1,18 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, onSnapshot } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { useAuth } from "@/hooks/use-auth";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format }s from "date-fns";
 import { Button } from "@/components/ui/button";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
 interface Submission {
     id: string;
@@ -28,33 +31,35 @@ export default function StudentQuizzesPage() {
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const fetchSubmissions = useCallback(async () => {
+    useEffect(() => {
         if (!user) return;
         setLoading(true);
-        try {
-            const db = getFirebaseDb();
-            const q = query(
-                collection(db, "quizSubmissions"),
-                where("userId", "==", user.uid),
-                orderBy("submittedAt", "desc")
-            );
-            const querySnapshot = await getDocs(q);
+
+        const db = getFirebaseDb();
+        if (!db) return;
+
+        const q = query(
+            collection(db, "quizSubmissions"),
+            where("userId", "==", user.uid),
+            orderBy("submittedAt", "desc")
+        );
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const subs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Submission));
             setSubmissions(subs);
-        } catch (error) {
-            console.error(error);
-            toast({
-                variant: "destructive",
-                title: "فشل تحميل نتائج الاختبارات",
-            });
-        } finally {
             setLoading(false);
-        }
-    }, [user, toast]);
+        }, (error) => {
+            console.error(error);
+            const permissionError = new FirestorePermissionError({
+                path: 'quizSubmissions',
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
+            setLoading(false);
+        });
 
-    useEffect(() => {
-        fetchSubmissions();
-    }, [fetchSubmissions]);
+        return () => unsubscribe();
+    }, [user]);
 
     return (
         <div className="space-y-4">
