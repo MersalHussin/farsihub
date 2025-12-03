@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -7,12 +8,13 @@ import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import type { Lecture } from "@/lib/types";
 import { Button } from "@/components/ui/button";
-import { Loader2, ArrowRight, FileQuestion } from "lucide-react";
+import { Loader2, ArrowRight, FileQuestion, FileText } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import Link from "next/link";
 import { VideoPlayerDialog } from "./video-player-dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function LectureDetailsPage() {
   const [lecture, setLecture] = useState<Lecture | null>(null);
@@ -88,13 +90,21 @@ export default function LectureDetailsPage() {
             <Separator />
     
             <div className="space-y-6">
-              <div className="aspect-video w-full">
-                  <iframe
-                  src={lecture.pdfUrl}
-                  className="w-full h-full rounded-lg border"
-                  title={lecture.title}
-                  ></iframe>
-              </div>
+              <Card className="w-full max-w-2xl mx-auto">
+                <CardHeader className="items-center text-center">
+                    <div className="p-4 bg-primary/10 rounded-full mb-2">
+                        <FileText className="w-12 h-12 text-primary" />
+                    </div>
+                    <CardTitle>ملف المحاضرة (PDF)</CardTitle>
+                </CardHeader>
+                <CardContent className="text-center">
+                     <Button size="lg" asChild>
+                        <a href={lecture.pdfUrl} target="_blank" rel="noopener noreferrer">
+                            ذاكر المحاضرة
+                        </a>
+                    </Button>
+                </CardContent>
+              </Card>
               
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                 {lecture.youtubeVideoUrl && (
