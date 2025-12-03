@@ -160,6 +160,8 @@ function GlobalLoadingWrapper({ children }: { children: React.ReactNode }) {
         setIsMounted(true);
     }, []);
 
+    // We only render the loading indicator on the client after the initial mount.
+    // This prevents any hydration mismatch.
     if (!isMounted || !loading) {
         return <>{children}</>;
     }
@@ -173,7 +175,7 @@ function GlobalLoadingWrapper({ children }: { children: React.ReactNode }) {
 }
 
 
-export function AppProviders({ children }: { children: React.Node }) {
+export function AppProviders({ children }: { children: React.ReactNode }) {
     return (
         <AuthProvider>
             <FirebaseErrorListener />
