@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription, CardFooter } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
-import { format }s from "date-fns";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { errorEmitter } from "@/lib/error-emitter";
 import { FirestorePermissionError } from "@/lib/errors";
@@ -78,7 +78,7 @@ export default function StudentQuizzesPage() {
                             <CardHeader>
                                 <CardTitle>{sub.quizTitle}</CardTitle>
                                 <CardDescription>
-                                    {format(sub.submittedAt.toDate(), 'PPP')}
+                                    {sub.submittedAt ? format(sub.submittedAt.toDate(), 'PPP') : 'N/A'}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">
