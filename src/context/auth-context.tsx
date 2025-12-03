@@ -96,7 +96,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      setLoading(true);
       if (firebaseUser) {
         await fetchUserData(firebaseUser);
       } else {
@@ -112,15 +111,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (loading) return; 
 
     const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup');
+    const protectedPaths = ['/dashboard', '/admin', '/student', '/lectures', '/assignments', '/quizzes'];
+    const isProtected = protectedPaths.some(path => pathname.startsWith(path));
 
     if (user) {
       if (isAuthPage) {
          router.replace('/dashboard');
       }
     } else {
-      const protectedPaths = ['/dashboard', '/admin', '/student', '/lectures', '/assignments', '/quizzes'];
-      const isProtected = protectedPaths.some(path => pathname.startsWith(path));
-      
       if (isProtected) {
         router.replace('/login');
       }
