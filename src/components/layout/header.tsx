@@ -14,10 +14,11 @@ import { useState, useEffect } from 'react';
 import { Skeleton } from '../ui/skeleton';
 import { PendingApprovalBanner } from './pending-approval-banner';
 import { Separator } from '@/components/ui/separator';
+import { usePathname } from 'next/navigation';
 
 
 export function Header() {
-  const { user, loading, logout } = useAuth();
+  const { user, loading } = useAuth();
   const pathname = usePathname();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
@@ -190,12 +191,3 @@ export function Header() {
     </header>
   );
 }
-
-// This is a workaround for the fact that usePathname is not available in server components
-const usePathname = () => {
-    const [path, setPath] = useState('');
-    useEffect(() => {
-        setPath(window.location.pathname);
-    }, []);
-    return path;
-};
