@@ -1,5 +1,7 @@
+
 "use client";
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, FileQuestion, Sparkles, ClipboardCheck } from 'lucide-react';
@@ -7,6 +9,7 @@ import Link from 'next/link';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
 import { useAuth } from '@/hooks/use-auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const features = [
   {
@@ -37,6 +40,41 @@ const features = [
 
 export default function Home() {
   const { user, loading } = useAuth();
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  const renderAuthButtons = () => {
+    if (!isClient || loading) {
+      return (
+        <div className="flex flex-col sm:flex-row justify-center gap-4">
+            <Skeleton className="h-14 w-48" />
+            <Skeleton className="h-14 w-48" />
+        </div>
+      );
+    }
+
+    if (user) {
+      return (
+        <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
+          <Link href="/lectures">أبدأ التعلم</Link>
+        </Button>
+      );
+    }
+
+    return (
+      <>
+        <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
+          <Link href="/signup">ابدأ رحلتك الآن</Link>
+        </Button>
+        <Button asChild size="lg" variant="secondary" className="font-bold text-lg px-8 py-6">
+          <Link href="/login">تسجيل الدخول</Link>
+        </Button>
+      </>
+    );
+  };
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -51,22 +89,7 @@ export default function Home() {
               منصتك التعليمية المتكاملة لتتبع تقدمك في تعلم اللغة الفارسية من خلال المحاضرات، والاختبارات، والتكليفات، وبرامج التطوير الذاتي.
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              {!loading && (
-                user ? (
-                   <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
-                    <Link href="/lectures">أبدأ التعلم</Link>
-                  </Button>
-                ) : (
-                  <>
-                    <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
-                      <Link href="/signup">ابدأ رحلتك الآن</Link>
-                    </Button>
-                    <Button asChild size="lg" variant="secondary" className="font-bold text-lg px-8 py-6">
-                      <Link href="/login">تسجيل الدخول</Link>
-                    </Button>
-                  </>
-                )
-              )}
+              {renderAuthButtons()}
             </div>
           </div>
         </section>

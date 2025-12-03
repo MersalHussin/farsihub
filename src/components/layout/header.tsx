@@ -84,8 +84,8 @@ export function Header() {
         setIsClient(true);
     }, []);
 
-    if (loading || !isClient) {
-      return <div className='h-10 w-24' />; // Placeholder for loading state and initial server render
+    if (!isClient || loading) {
+      return <div className='h-10 w-24' />; // Placeholder to match server render and prevent layout shift
     }
 
     if (user) {
