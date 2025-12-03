@@ -8,8 +8,8 @@ import { getFirebaseAuth, getFirebaseDb } from '@/lib/firebase';
 import type { AppUser } from '@/lib/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
-import { useAuth as useAuthHook } from '@/hooks/use-auth';
 import { GlobalLoadingIndicator } from '@/components/GlobalLoadingIndicator';
+import { useAuth as useAuthHook } from '@/hooks/use-auth';
 
 interface AuthContextType {
   user: AppUser | null;
@@ -33,6 +33,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   return (
     <>
       {loading && <GlobalLoadingIndicator />}
+      <FirebaseErrorListener />
       {children}
     </>
   );
@@ -188,7 +189,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <AuthContext.Provider value={value}>
-        <FirebaseErrorListener />
         {children}
     </AuthContext.Provider>
   );
