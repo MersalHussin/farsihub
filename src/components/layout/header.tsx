@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
+import { Skeleton } from '../ui/skeleton';
 
 function PendingApprovalBanner() {
     return (
@@ -85,7 +86,7 @@ export function Header() {
     }, []);
 
     if (!isClient || loading) {
-      return <div className='h-10 w-24' />; // Placeholder to match server render and prevent layout shift
+      return isMobile ? <div className='h-24 w-full' /> : <div className='h-10 w-10' />; 
     }
 
     if (user) {
@@ -137,7 +138,6 @@ export function Header() {
       );
     }
 
-    // Render for unauthenticated user, only on client
     return (
       <div className={cn("flex items-center gap-2", isMobile && 'flex-col w-full mt-4 pt-4 border-t')}>
         <Button variant="ghost" asChild  className={cn(isMobile && 'w-full')}>

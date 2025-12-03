@@ -65,14 +65,14 @@ export default function Home() {
     }
 
     return (
-      <>
+      <div className="flex flex-col sm:flex-row justify-center gap-4">
         <Button asChild size="lg" className="font-bold text-lg px-8 py-6">
           <Link href="/signup">ابدأ رحلتك الآن</Link>
         </Button>
         <Button asChild size="lg" variant="secondary" className="font-bold text-lg px-8 py-6">
           <Link href="/login">تسجيل الدخول</Link>
         </Button>
-      </>
+      </div>
     );
   };
 
@@ -88,9 +88,7 @@ export default function Home() {
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
               منصتك التعليمية المتكاملة لتتبع تقدمك في تعلم اللغة الفارسية من خلال المحاضرات، والاختبارات، والتكليفات، وبرامج التطوير الذاتي.
             </p>
-            <div className="flex flex-col sm:flex-row justify-center gap-4">
-              {renderAuthButtons()}
-            </div>
+            {renderAuthButtons()}
           </div>
         </section>
 
