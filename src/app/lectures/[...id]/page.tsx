@@ -20,6 +20,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
 const AskQuestionForm = ({ lecture }: { lecture: Lecture }) => {
     const [question, setQuestion] = useState("");
@@ -27,7 +29,7 @@ const AskQuestionForm = ({ lecture }: { lecture: Lecture }) => {
     const { user } = useAuth();
     const { toast } = useToast();
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!user) {
             toast({ variant: "destructive", title: "يجب تسجيل الدخول لطرح سؤال." });
@@ -39,34 +41,48 @@ const AskQuestionForm = ({ lecture }: { lecture: Lecture }) => {
         }
 
         setIsSubmitting(true);
-        try {
-            const db = getFirebaseDb();
-            if(!db) throw new Error("Firestore not initialized");
+        const db = getFirebaseDb();
+        if(!db) {
+            toast({ variant: "destructive", title: "فشل الاتصال بقاعدة البيانات." });
+            setIsSubmitting(false);
+            return;
+        };
 
-            await addDoc(collection(db, "qna"), {
-                question,
-                lectureId: lecture.id,
-                lectureTitle: lecture.title,
-                subjectId: lecture.subjectId,
-                subjectName: lecture.subjectName,
-                userId: user.uid,
-                userName: user.name,
-                userEmail: user.email,
-                userPhotoURL: user.photoURL || null,
-                answered: false,
-                answer: null,
-                createdAt: serverTimestamp(),
-                answeredAt: null,
-            });
+        const qnaData = {
+            question,
+            lectureId: lecture.id,
+            lectureTitle: lecture.title,
+            subjectId: lecture.subjectId,
+            subjectName: lecture.subjectName,
+            userId: user.uid,
+            userName: user.name,
+            userEmail: user.email,
+            userPhotoURL: user.photoURL || null,
+            answered: false,
+            answer: null,
+            createdAt: serverTimestamp(),
+            answeredAt: null,
+        };
+        
+        const qnaCollectionRef = collection(db, "qna");
 
+        addDoc(qnaCollectionRef, qnaData)
+        .then(() => {
             setQuestion("");
             toast({ title: "تم إرسال سؤالك بنجاح!", description: "سيتم مراجعته والإجابة عليه قريبًا." });
-        } catch (error) {
+        })
+        .catch((error) => {
             console.error("Error submitting question:", error);
-            toast({ variant: "destructive", title: "فشل إرسال السؤال." });
-        } finally {
+            const permissionError = new FirestorePermissionError({
+                path: 'qna',
+                operation: 'create',
+                requestResourceData: qnaData
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        })
+        .finally(() => {
             setIsSubmitting(false);
-        }
+        });
     };
     
     if (!user) {
@@ -121,7 +137,11 @@ const QnaSection = ({ lecture }: { lecture: Lecture }) => {
             setLoading(false);
         }, (error) => {
             console.error("Error fetching answered questions:", error);
-            toast({ variant: "destructive", title: "فشل تحميل الأسئلة والأجوبة." });
+            const permissionError = new FirestorePermissionError({
+                path: `qna`,
+                operation: 'list',
+            });
+            errorEmitter.emit('permission-error', permissionError);
             setLoading(false);
         });
 
@@ -188,35 +208,49 @@ export default function LectureDetailsPage() {
   const idParams = params.id || [];
   const [subjectId, lectureId] = idParams;
 
-  const fetchLecture = useCallback(async () => {
+  const fetchLecture = useCallback(() => {
     if (typeof subjectId !== 'string' || typeof lectureId !== 'string') {
         router.push('/lectures'); // Redirect if params are invalid
         return;
     }
     setLoading(true);
-    try {
-      const db = getFirebaseDb();
-      if (!db) throw new Error("Firestore is not initialized.");
 
-      const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
-      const lectureSnap = await getDoc(lectureRef);
+    const db = getFirebaseDb();
+    if (!db) {
+        toast({ variant: "destructive", title: "فشل تحميل البيانات" });
+        setLoading(false);
+        return;
+    };
 
+    const lectureRef = doc(db, "subjects", subjectId, "lectures", lectureId);
+    
+    const unsubscribe = onSnapshot(lectureRef, (lectureSnap) => {
       if (lectureSnap.exists()) {
         setLecture({ id: lectureSnap.id, ...lectureSnap.data() } as Lecture);
       } else {
         toast({ variant: "destructive", title: "المحاضرة غير موجودة" });
         router.push('/lectures');
       }
-    } catch (error) {
-      console.error("Error fetching data: ", error);
-      toast({ variant: "destructive", title: "فشل تحميل البيانات" });
-    } finally {
       setLoading(false);
-    }
+    }, (error) => {
+        console.error("Error fetching data: ", error);
+        const permissionError = new FirestorePermissionError({
+            path: lectureRef.path,
+            operation: 'get',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
+    });
+
+    return unsubscribe;
+
   }, [subjectId, lectureId, toast, router]);
 
   useEffect(() => {
-    fetchLecture();
+    const unsubscribe = fetchLecture();
+    return () => {
+        if(unsubscribe) unsubscribe();
+    }
   }, [fetchLecture]);
 
   const pageContent = () => {

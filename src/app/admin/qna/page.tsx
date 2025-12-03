@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, where, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { getFirebaseDb } from "@/lib/firebase";
 import { useToast } from "@/hooks/use-toast";
 import type { QnA } from "@/lib/types";
@@ -17,6 +17,8 @@ import { ar } from 'date-fns/locale';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Link from "next/link";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { errorEmitter } from "@/lib/error-emitter";
+import { FirestorePermissionError } from "@/lib/errors";
 
 
 export default function QnaAdminPage() {
@@ -28,6 +30,7 @@ export default function QnaAdminPage() {
   useEffect(() => {
     const db = getFirebaseDb();
     if(!db) return;
+    setLoading(true);
 
     const qnaCollection = collection(db, "qna");
     const statusFilter = activeTab === 'answered' ? true : false;
@@ -39,7 +42,11 @@ export default function QnaAdminPage() {
       setLoading(false);
     }, (error) => {
       console.error("Error fetching Q&A: ", error);
-      toast({ variant: "destructive", title: "فشل تحميل الأسئلة" });
+      const permissionError = new FirestorePermissionError({
+          path: 'qna',
+          operation: 'list',
+      });
+      errorEmitter.emit('permission-error', permissionError);
       setLoading(false);
     });
 
@@ -50,29 +57,43 @@ export default function QnaAdminPage() {
     const [answer, setAnswer] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!answer.trim()) {
             toast({ variant: "destructive", title: "لا يمكن إرسال إجابة فارغة." });
             return;
         }
         setIsSubmitting(true);
-        try {
-            const db = getFirebaseDb();
-            if(!db) throw new Error("DB not ready");
-            const qnaDocRef = doc(db, "qna", questionId);
-            await updateDoc(qnaDocRef, {
-                answer: answer,
-                answered: true,
-                answeredAt: new Date(),
-            });
-            toast({ title: "تم إرسال الإجابة بنجاح" });
-        } catch (error) {
-            console.error("Error submitting answer:", error);
-            toast({ variant: "destructive", title: "فشل إرسال الإجابة" });
-        } finally {
+        const db = getFirebaseDb();
+        if(!db) {
+            toast({ variant: "destructive", title: "فشل الاتصال بقاعدة البيانات." });
             setIsSubmitting(false);
-        }
+            return;
+        };
+
+        const qnaDocRef = doc(db, "qna", questionId);
+        const updateData = {
+            answer: answer,
+            answered: true,
+            answeredAt: serverTimestamp(),
+        };
+
+        updateDoc(qnaDocRef, updateData)
+        .then(() => {
+            toast({ title: "تم إرسال الإجابة بنجاح" });
+        })
+        .catch((error) => {
+            console.error("Error submitting answer:", error);
+            const permissionError = new FirestorePermissionError({
+                path: qnaDocRef.path,
+                operation: 'update',
+                requestResourceData: updateData
+            });
+            errorEmitter.emit('permission-error', permissionError);
+        })
+        .finally(() => {
+            setIsSubmitting(false);
+        });
     };
 
     return (
