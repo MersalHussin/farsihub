@@ -217,9 +217,8 @@
           },
           "match /qna/{qnaId}": {
             "allow create": "if isSignedIn();",
-            "allow read": "if isSignedIn() && (resource.data.answered == true || isAdmin());",
-            "allow list": "if isSignedIn();",
-            "allow update": "if isAdmin();"
+            "allow read, update": "if isAdmin();",
+            "allow list": "if isAdmin() || (isSignedIn() && request.query.where.answered == true);"
           }
         }
       }
